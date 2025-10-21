@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
+
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #C3B294;
+}
+
+.hero-section {
+  background-image: url('http://googleusercontent.com/image_collection/image_retrieval/2985094898697019255_0');
+  background-size: cover;
+  background-position: center;
+  position: relative;
+  color: red;
+  font-family: 'Georgia'; 
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 0;
+}
+
+.btn-primary {
+  @apply bg-purple-600 text-white font-semibold py-3 px-8 rounded-full shadow-lg hover:bg-purple-700 transition duration-300 transform hover:scale-105;
+}
+
+.menu-image 
+{
+  width: 150px; /* Sets a fixed width */
+  height: 150px; /* Sets a fixed height */
+}

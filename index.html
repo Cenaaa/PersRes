@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <!-- CRUCIAL: Ensures responsiveness on all devices -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Persian Bites Ordering App</title>
+    
+    <!-- FIX 1: Add the Tailwind CSS CDN Script -->
+    <!-- This line is what loads all the 'bg-purple-600', 'flex', 'rounded-3xl' classes -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FIX 2: Load the Google Fonts globally -->
+    <!-- This ensures Montserrat and Poppins are available for the whole page -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Poppins:wght@400;600&display=swap');
+    </style>
+    
+</head>
+<body>
+    <!-- The root where your App.jsx component will be rendered -->
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>
