@@ -1,2492 +1,7 @@
-// import React, { useState, useEffect, useCallback, useMemo } from 'react';
-// import { ChefHat, Utensils, Home, BookOpen, ShoppingCart, Plus, Minus, XCircle, DollarSign, ListOrdered, Loader2, CheckCheck, CreditCard, MapPin, Phone, Mail, AlertTriangle, RefreshCw, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { ChefHat, Utensils, Home, BookOpen, ShoppingCart, Plus, Minus, XCircle, DollarSign, ListOrdered, Loader2, CheckCheck, CreditCard, AlertTriangle, RefreshCw, Trash2, LogOut, Edit, WifiOff, Save, History, Calendar, Archive } from 'lucide-react';
 
-// // --- FIREBASE IMPORTS & SETUP ---
-// import { initializeApp } from 'firebase/app';
-// import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-// import {
-//     getFirestore,
-//     collection,
-//     addDoc,
-//     query,
-//     onSnapshot,
-//     serverTimestamp,
-//     setLogLevel,
-//     doc, // Added for updating/deleting
-//     updateDoc, // Added for updating status
-//     deleteDoc // Added for "Picked up" button
-// } from 'firebase/firestore';
-
-// // ====================================================================================
-// // CRITICAL: FIREBASE CONFIGURATION (DO NOT MODIFY GLOBAL VARIABLE CHECK)
-// // ====================================================================================
-
-// // Retrieve globals from Canvas environment or default to empty/null if running locally.
-// const canvasFirebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-// const canvasInitialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-// const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-// // If running locally, you must provide your config here:
-// const firebaseConfig = Object.keys(canvasFirebaseConfig).length > 0
-//     ? canvasFirebaseConfig
-//     : {
-//           // 🚀 FIX: Placeholder values to ensure initialization. REPLACE THESE if running outside Canvas.
-//           // Your current config: saffron-41b76
-//           apiKey: "AIzaSyCZjRhhYlse6zb6e0z729vXEFyIifKOEgM",
-//           authDomain: "saffron-41b76.firebaseapp.com",
-//           projectId: "saffron-41b76", // THIS IS CRITICAL FOR FIRESTORE
-//           storageBucket: "saffron-41b76.appspot.com",
-//           messagingSenderId: "1234567890",
-//           appId: "1:1234567890:web:abcdef1234567890",
-//       };
-
-// const initialAuthToken = canvasInitialAuthToken;
-// setLogLevel('debug'); // Enable Firestore logging
-
-// // --- Gemini API Constants ---
-// const apiKey = ""; // Leave as empty string for Canvas execution or replace with your key
-// const LLM_MODEL = "gemini-2.5-flash-preview-05-20";
-
-// // --- TYPE DEFINITIONS for TypeScript Safety ---
-
-// interface MenuItem {
-//     name: string;
-//     description: string;
-//     price: number;
-//     image: string;
-// }
-
-// interface CartItem extends MenuItem {
-//     quantity: number;
-// }
-
-// interface OrderItem {
-//     name: string;
-//     quantity: number;
-//     price: number;
-//     subtotal: number;
-// }
-
-// interface FirestoreTimestamp {
-//     seconds: number;
-//     nanoseconds: number;
-// }
-
-// interface Order {
-//     id: string;
-//     userId: string;
-//     customerName: string;
-//     customerPhone: string;
-//     customerEmail: string;
-//     deliveryInstructions: string;
-//     items: OrderItem[];
-//     totalAmount: number;
-//     status: string; // This will be 'Pending Payment/Unpaid' or 'Done'
-//     payment: { method: string; transactionId: string };
-//     timestamp: FirestoreTimestamp | null;
-// }
-
-// type AiResult = {
-//     dishName: string;
-//     type: 'description' | 'pairing' | 'error';
-//     text: string;
-// } | null;
-
-// interface OrderAiResult {
-//     summary: string;
-//     actions: string[];
-// }
-
-// // Mock Menu Data (Typed)
-// const menuItems: MenuItem[] = [
-//     { name: 'Kabab Koobideh', description: 'Two skewers of seasoned ground meat, grilled to perfection, served with saffron rice.', price: 20.00, image: 'https://placehold.co/192x192/4F46E5/FFFFFF?text=Kabab' },
-//     { name: 'Ghormeh Sabzi', description: 'A rich and savory herb stew with kidney beans, dried lime, and lamb shank.', price: 18.50, image: 'https://placehold.co/192x192/8B5CF6/FFFFFF?text=Sabzi' },
-//     { name: 'Fesenjan', description: 'A delightful, slightly sweet and sour stew of chicken, ground walnuts, and pomegranate paste.', price: 22.00, image: 'https://placehold.co/192x192/6D28D9/FFFFFF?text=Fesenjan' },
-//     { name: 'Tahdig', description: 'The crispy, golden layer of rice from the bottom of the pot, often considered a delicacy.', price: 8.00, image: 'https://placehold.co/192x192/A78BFA/FFFFFF?text=Tahdig' },
-//     { name: 'Barg Kabab', description: 'Thinly sliced lamb or beef tenderloin marinated in lemon juice and onion, grilled on a skewer.', price: 25.00, image: 'https://placehold.co/192x192/8B5CF6/FFFFFF?text=Barg' },
-//     { name: 'Zereshk Polo', description: 'Steamed rice with bright red barberries and saffron, traditionally served with roasted chicken.', price: 19.00, image: 'https://placehold.co/192x192/4F46E5/FFFFFF?text=Polo' },
-// ];
-
-// export default function App() {
-//     // --- STATE VARIABLES (Typed) ---
-//     const [activeSection, setActiveSection] = useState('home');
-//     const [cartItems, setCartItems] = useState<CartItem[]>([]);
-//     const [db, setDb] = useState<any>(null); // Use 'any' for Firestore instance as it's complex
-//     const [auth, setAuth] = useState<any>(null); // Use 'any' for Auth instance
-//     const [userId, setUserId] = useState<string | null>(null);
-//     const [orders, setOrders] = useState<Order[]>([]);
-//     const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-//     const [orderStatus, setOrderStatus] = useState<string | null>(null);
-//     const [isAppReady, setIsAppReady] = useState(false);
-
-//     // --- AI State for Menu ---
-//     const [aiResult, setAiResult] = useState<AiResult>(null);
-//     const [aiLoading, setAiLoading] = useState(false);
-
-//     // --- AI State for Orders (Record<OrderId, Result>) ---
-//     const [orderAiResult, setOrderAiResult] = useState<Record<string, OrderAiResult>>({});
-//     const [orderAiLoadingId, setOrderAiLoadingId] = useState<string | null>(null);
-
-//     const [customerInfo, setCustomerInfo] = useState({
-//         name: '', email: '', phone: '', instructions: ''
-//     });
-
-//     // 1. Initialize Firebase and Handle Auth 
-//     useEffect(() => {
-//         let cleanup: (() => void) | undefined;
-        
-//         // --- FIX 1: SIMPLIFY VALIDATION FOR LOCAL RUNNING ---
-//         // Changed validation to check if project ID is present, which it should be locally.
-//         const isConfigValid = firebaseConfig && Object.keys(firebaseConfig).length > 0 && firebaseConfig.projectId;
-
-//         if (isConfigValid) {
-//             try {
-//                 const app = initializeApp(firebaseConfig);
-//                 const firestore = getFirestore(app);
-//                 setDb(firestore);
-
-//                 const firebaseAuth = getAuth(app);
-//                 setAuth(firebaseAuth);
-
-//                 const unsubscribeAuth = onAuthStateChanged(firebaseAuth, async (user) => {
-//                     if (!user) {
-//                         try {
-//                             if (initialAuthToken) {
-//                                 await signInWithCustomToken(firebaseAuth, initialAuthToken);
-//                             } else {
-//                                 await signInAnonymously(firebaseAuth);
-//                             }
-//                         } catch (e) {
-//                             // FIX: Added fail-safe to set a temporary userId if Auth fails.
-//                             console.error("Authentication failed during sign-in:", e);
-//                             setUserId(crypto.randomUUID()); 
-//                         }
-//                     }
-
-//                     // Ensure userId is set, either from auth or a random UUID fallback
-//                     const currentUserId = firebaseAuth.currentUser?.uid || crypto.randomUUID();
-//                     setUserId(currentUserId);
-
-//                     if (firestore) {
-//                         setIsAppReady(true);
-//                     }
-//                 });
-
-//                 cleanup = () => unsubscribeAuth();
-//             } catch (error) {
-//                 console.error("Firebase initialization failed. Check your config object structure:", error);
-//                 setDb(null);
-//                 setUserId(crypto.randomUUID());
-//                 setIsAppReady(true);
-//             }
-//         } else {
-//             console.warn("Firebase config is missing or invalid. Database features will be disabled.");
-//             setDb(null);
-//             setUserId(crypto.randomUUID());
-//             setIsAppReady(true);
-//         }
-
-//         return cleanup;
-//     }, []);
-
-//     // 2. Real-time Order Tracking (Owner Dashboard)
-//     useEffect(() => {
-//         // Only run if DB is initialized and App is ready
-//         if (db && userId && isAppReady && appId) {
-//             // Public path for collaborative data: /artifacts/{appId}/public/data/orders
-//             const ordersPath = `artifacts/${appId}/public/data/orders`;
-
-//             // NOTE: orderBy is intentionally omitted to avoid requiring index creation
-//             const q = query(collection(db, ordersPath));
-
-//             const unsubscribe = onSnapshot(q, (snapshot) => {
-//                 const fetchedOrders: Order[] = [];
-//                 snapshot.forEach((doc) => {
-//                     fetchedOrders.push({ id: doc.id, ...(doc.data() as Omit<Order, 'id'>) });
-//                 });
-                
-//                 // Client-side sorting by timestamp (newest first)
-//                 fetchedOrders.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
-//                 setOrders(fetchedOrders);
-//             }, (error) => {
-//                 // This handles the previous LISTEN 400 error (Permission Denied for read)
-//                 console.error("Error fetching orders (check read permissions):", error);
-//                 if (error && error.message.includes('permission-denied')) {
-//                     setOrderStatus('db_permission_error_read');
-//                     setTimeout(() => setOrderStatus(null), 5000);
-//                 }
-//             });
-
-//             return () => unsubscribe();
-//         }
-//     }, [db, userId, isAppReady]);
-
-//     // 3. GEMINI API Logic (General Text Output) ---
-//     const callGeminiApi = useCallback(async (systemPrompt: string, userQuery: string, retries = 3): Promise<string> => {
-        
-//         // This check handles cases where the user has not replaced the placeholder key
-//         if (apiKey === "YOUR_GEMINI_API_KEY_HERE" || apiKey === "") {
-//             return "AI feature disabled: Please provide a valid Gemini API key.";
-//         }
-
-//         setAiLoading(true);
-//         setAiResult(null);
-
-//         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${apiKey}`;
-
-//         const payload = {
-//             contents: [{ parts: [{ text: userQuery }] }],
-//             systemInstruction: {
-//                 parts: [{ text: systemPrompt }]
-//             },
-//         };
-
-//         for (let attempt = 0; attempt < retries; attempt++) {
-//             try {
-//                 const response = await fetch(apiUrl, {
-//                     method: 'POST',
-//                     headers: { 'Content-Type': 'application/json' },
-//                     body: JSON.stringify(payload)
-//                 });
-
-//                 if (!response.ok) {
-//                     throw new Error(`HTTP error! status: ${response.status}`);
-//                 }
-
-//                 const result = await response.json();
-//                 const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-//                 if (text) {
-//                     setAiLoading(false);
-//                     return text;
-//                 }
-//                 throw new Error("API response text missing.");
-
-//             } catch (error) {
-//                 console.error(`Attempt ${attempt + 1} failed:`, error);
-//                 if (attempt < retries - 1) {
-//                     const delay = Math.pow(2, attempt) * 1000;
-//                     await new Promise(res => setTimeout(res, delay));
-//                 } else {
-//                     setAiLoading(false);
-//                     return "Sorry, the AI service is currently unavailable. Please try again later.";
-//                 }
-//             }
-//         }
-//         setAiLoading(false);
-//         return "An unexpected error occurred.";
-//     }, [apiKey]);
-
-//     const generateDescription = useCallback(async (item: MenuItem) => {
-//         if (aiLoading) return;
-//         setAiResult({ dishName: item.name, type: 'description', text: "" }); // Reset result for current dish
-//         const systemPrompt = "You are a poetic, high-end restaurant copywriter specializing in Persian cuisine. Generate a single, captivating, and sensory description (max 2 sentences) for a menu item. Do not mention price or ingredients directly in the response, focus purely on the experience.";
-//         const userQuery = `Generate an alternative description for the dish: ${item.name} which is currently described as: "${item.description}"`;
-//         const resultText = await callGeminiApi(systemPrompt, userQuery);
-
-//         if (resultText && !resultText.includes("AI feature disabled")) {
-//             setAiResult({ dishName: item.name, type: 'description', text: resultText });
-//         } else if (resultText.includes("AI feature disabled")) {
-//             setAiResult({ dishName: item.name, type: 'error', text: resultText });
-//         }
-//     }, [aiLoading, callGeminiApi]);
-
-//     const generatePairing = useCallback(async (item: MenuItem) => {
-//         if (aiLoading) return;
-//         setAiResult({ dishName: item.name, type: 'pairing', text: "" }); // Reset result for current dish
-//         const systemPrompt = "You are a sommelier and culinary expert. Suggest one ideal pairing (either a drink like Doogh or a side dish like Salad Shirazi) for the following Persian dish and provide a single, short justification why it pairs well (max 2 sentences). Start the response with the suggested item name in bold, followed by the justification. Use Markdown for bolding.";
-//         const userQuery = `Suggest a pairing for the Persian dish: ${item.name} which has the description: "${item.description}"`;
-//         const resultText = await callGeminiApi(systemPrompt, userQuery);
-
-//         if (resultText && !resultText.includes("AI feature disabled")) {
-//             setAiResult({ dishName: item.name, type: 'pairing', text: resultText });
-//         } else if (resultText.includes("AI feature disabled")) {
-//             setAiResult({ dishName: item.name, type: 'error', text: resultText });
-//         }
-//     }, [aiLoading, callGeminiApi]);
-
-//     // 4. GEMINI API Logic (Structured JSON Output for Orders) ---
-//     const generateOrderSummaryAndActions = useCallback(async (order: Order, retries = 3) => {
-//         if (orderAiLoadingId === order.id) return;
-
-//         if (apiKey === "YOUR_GEMINI_API_KEY_HERE" || apiKey === "") {
-//             setOrderAiResult(prev => ({
-//                 ...prev,
-//                 [order.id]: {
-//                     summary: "AI feature disabled: Provide a valid Gemini API key.",
-//                     actions: ["Manually review order details."]
-//                 }
-//             }));
-//             return;
-//         }
-
-//         setOrderAiLoadingId(order.id);
-//         const orderDetails = order.items.map(item => `${item.quantity}x ${item.name}`).join('; ');
-//         const userQuery = `Analyze the following restaurant order and provide a concise summary and key action items for the kitchen. Order details: ${orderDetails}. Customer name: ${order.customerName}. Special instructions: ${order.deliveryInstructions || 'None'}`;
-//         const systemPrompt = "You are a professional kitchen manager. Your task is to analyze a raw order list and convert it into a concise summary for front-of-house staff (one short paragraph) and a list of urgent, practical action items for the kitchen chef. The output must be in JSON format.";
-//         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${apiKey}`;
-
-//         const payload = {
-//             contents: [{ parts: [{ text: userQuery }] }],
-//             systemInstruction: { parts: [{ text: systemPrompt }] },
-//             tools: [{ "google_search": {} }], // Adding search grounding for context on dishes, though primary use is JSON structure
-//             generationConfig: {
-//                 responseMimeType: "application/json",
-//                 responseSchema: {
-//                     type: "OBJECT",
-//                     properties: {
-//                         "summary": { "type": "STRING", description: "A one-sentence summary of the order for front-of-house." },
-//                         "actions": {
-//                             "type": "ARRAY",
-//                             "items": { "type": "STRING" },
-//                             description: "A list of critical, action-oriented instructions for the kitchen."
-//                         }
-//                     },
-//                     "propertyOrdering": ["summary", "actions"]
-//                 }
-//             }
-//         };
-
-//         for (let attempt = 0; attempt < retries; attempt++) {
-//             try {
-//                 const response = await fetch(apiUrl, {
-//                     method: 'POST',
-//                     headers: { 'Content-Type': 'application/json' },
-//                     body: JSON.stringify(payload)
-//                 });
-
-//                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-//                 const result = await response.json();
-//                 const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-//                 if (jsonText) {
-//                     const parsedJson = JSON.parse(jsonText) as OrderAiResult;
-//                     setOrderAiResult(prev => ({
-//                         ...prev,
-//                         [order.id]: {
-//                             summary: parsedJson.summary,
-//                             actions: parsedJson.actions
-//                         }
-//                     }));
-//                     setOrderAiLoadingId(null);
-//                     return;
-//                 }
-//                 throw new Error("API response text missing or invalid JSON.");
-
-//             } catch (error) {
-//                 console.error(`Attempt ${attempt + 1} failed:`, error);
-//                 if (attempt < retries - 1) {
-//                     const delay = Math.pow(2, attempt) * 1000;
-//                     await new Promise(res => setTimeout(res, delay));
-//                 } else {
-//                     setOrderAiLoadingId(null);
-//                     setOrderAiResult(prev => ({
-//                         ...prev,
-//                         [order.id]: {
-//                             summary: "Failed to generate AI summary: Service unavailable.",
-//                             actions: ["Check API connection.", "Manually review order details."]
-//                         }
-//                     }));
-//                     return;
-//                 }
-//             }
-//         }
-//         setOrderAiLoadingId(null);
-//     }, [orderAiLoadingId, apiKey]);
-
-//     // 5. Order Logic
-//     const handleAddToCart = (item: MenuItem) => {
-//         setCartItems(prevItems => {
-//             const existingItem = prevItems.find(cartItem => cartItem.name === item.name);
-//             if (existingItem) {
-//                 return prevItems.map(cartItem =>
-//                     cartItem.name === item.name ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem
-//                 );
-//             }
-//             return [...prevItems, { ...item, quantity: 1 }];
-//         });
-//     };
-
-//     const updateQuantity = (itemName: string, newQuantity: number) => {
-//         if (newQuantity <= 0) {
-//             setCartItems(prevItems => prevItems.filter(item => item.name !== itemName));
-//         } else {
-//             setCartItems(prevItems => prevItems.map(item =>
-//                 item.name === itemName ? { ...item, quantity: newQuantity } : item
-//             ));
-//         }
-//     };
-
-//     const calculateTotal = (): number => {
-//         return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-//     };
-
-//     const calculateTotalFormatted = () => calculateTotal().toFixed(2);
-
-
-//     const placeOrder = async (e: React.FormEvent) => {
-//         e.preventDefault();
-
-//         if (cartItems.length === 0) {
-//             setOrderStatus('validation_empty_cart');
-//             setTimeout(() => setOrderStatus(null), 3000);
-//             return;
-//         }
-//         if (!customerInfo.name || !customerInfo.phone) {
-//             setOrderStatus('validation_missing_fields');
-//             setTimeout(() => setOrderStatus(null), 3000);
-//             return;
-//         }
-        
-//         if (isPlacingOrder) return; 
-
-//         // CRITICAL: Check if DB is available (This prevents the app from crashing on unconfigured setups)
-//         // --- FIX 2: REMOVED PROJECT ID CHECK ---
-//         // The check was: firebaseConfig.projectId !== "saffron-41b76"
-//         // This fails when running locally because your local config *has* the correct ID.
-//         // The check now ensures the config object has *some* project ID.
-//         const isConfigured = Object.keys(firebaseConfig).length > 0 && firebaseConfig.projectId;
-        
-//         if (!isAppReady || !db || !userId || !appId || !isConfigured) {
-//             console.error("CRITICAL: Order attempted, but Firestore DB is not initialized or configured.");
-//             setOrderStatus('config_missing_db');
-//             setIsPlacingOrder(false);
-//             setTimeout(() => setOrderStatus(null), 7000);
-//             return;
-//         }
-
-//         // Start loading and disable button
-//         setIsPlacingOrder(true);
-//         setOrderStatus(null);
-
-//         try {
-//             // Path: /artifacts/{appId}/public/data/orders (Public data for the dashboard)
-//             const ordersPath = `artifacts/${appId}/public/data/orders`;
-
-//             const orderData = {
-//                 userId: userId,
-//                 customerName: customerInfo.name,
-//                 customerPhone: customerInfo.phone,
-//                 customerEmail: customerInfo.email || 'N/A',
-//                 deliveryInstructions: customerInfo.instructions || 'None',
-//                 items: cartItems.map(item => ({
-//                     name: item.name,
-//                     quantity: item.quantity,
-//                     price: item.price,
-//                     subtotal: item.price * item.quantity
-//                 })),
-//                 totalAmount: calculateTotal(),
-//                 status: 'Pending Payment/Unpaid', // This is the default "Working On" status
-//                 payment: { method: 'Cash/Pickup (Unpaid)', transactionId: 'N/A' },
-//                 timestamp: serverTimestamp(),
-//             };
-
-//             await addDoc(collection(db, ordersPath), orderData);
-
-//             // SUCCESS HANDLERS
-//             setCartItems([]);
-//             setCustomerInfo({ name: '', email: '', phone: '', instructions: '' });
-//             setOrderStatus('success');
-//             setActiveSection('menu'); 
-            
-//         } catch (error) {
-//             // This catches the 400 Bad Request error due to Security Rules.
-//             console.error("Error placing order (check create permissions):", error);
-//             setOrderStatus('db_permission_error_write');
-            
-//         } finally {
-//             // CRITICAL FIX: Ensure loading state is ALWAYS reset on completion (success or error)
-//             setIsPlacingOrder(false); 
-//             setTimeout(() => setOrderStatus(null), 5000);
-//         }
-//     };
-
-//     // Helper to render order status box
-//     const OrderStatusMessage = ({ status }: { status: string | null }) => {
-//         if (!status) return null;
-
-//         let color, text, Icon;
-
-//         switch (status) {
-//             case 'success':
-//                 color = 'bg-green-500';
-//                 text = 'Order placed successfully! Pending payment at pickup/delivery.';
-//                 Icon = CheckCheck;
-//                 break;
-//             case 'db_permission_error_write':
-//                 color = 'bg-red-500';
-//                 text = 'Operation Failed: Security Rules denied the WRITE/UPDATE operation. (HINT: Check Firestore rules to allow "update" and "delete".)';
-//                 Icon = XCircle;
-//                 break;
-//             case 'db_permission_error_read':
-//                 color = 'bg-red-500';
-//                 text = 'Dashboard Failed: Security Rules denied the READ operation. (HINT: Check your Firestore Security Rules.)';
-//                 Icon = XCircle;
-//                 break;
-//             case 'config_missing_db': // Updated explicit status
-//                 color = 'bg-red-600';
-//                 text = 'Order Failed: Firestore config is missing. Please replace the placeholder values in the firebaseConfig object to enable the database.';
-//                 Icon = AlertTriangle;
-//                 break;
-//             case 'validation_missing_fields':
-//                 color = 'bg-yellow-500';
-//                 text = '⚠️ Please fill in your Full Name and Phone Number to proceed with checkout.';
-//                 Icon = ListOrdered;
-//                 break;
-//             case 'validation_empty_cart':
-//                 color = 'bg-yellow-500';
-//                 text = '⚠️ Your cart is empty. Please add items before checking out.';
-//                 Icon = ShoppingCart;
-//                 break;
-//             default:
-//                 return null;
-//         }
-
-//         return (
-//             <div className={`fixed top-4 right-4 z-50 p-4 rounded-xl text-white font-semibold flex items-center shadow-2xl max-w-sm ${color}`}>
-//                 <Icon className="w-6 h-6 mr-3 flex-shrink-0" />
-//                 <span className="text-sm">{text}</span>
-//             </div>
-//         );
-//     };
-
-//     // --- Reusable Navigation Button Component ---
-//     const NavButton = ({ sectionName, label, IconComponent, count, isOwner = false }: { sectionName: string, label: string, IconComponent: React.ElementType, count?: number, isOwner?: boolean }) => {
-//         const baseBg = isOwner ? 'bg-gray-800' : 'bg-purple-600';
-//         const baseHover = isOwner ? 'hover:bg-gray-900' : 'hover:bg-purple-700';
-//         const ringColor = isOwner ? 'ring-gray-400' : 'ring-purple-400';
-
-//         const activeClasses = activeSection === sectionName
-//             ? `shadow-2xl ring-4 ${ringColor} scale-105 ring-offset-4 ring-offset-gray-100`
-//             : `${baseHover} shadow-lg`;
-
-//         const displayLabel = count !== undefined ? `${label} (${count})` : label;
-
-//         return (
-//             <button
-//                 onClick={() => setActiveSection(sectionName)}
-//                 className={`
-//                     w-24 h-24 md:w-28 md:h-28 rounded-full flex flex-col items-center justify-center
-//                     font-semibold text-white text-xs md:text-sm font-sans
-//                     transition duration-300 transform flex-shrink-0
-//                     ${baseBg} ${activeClasses}
-//                 `}
-//             >
-//                 <IconComponent className="mb-1" size={24} />
-//                 <span className="text-center">{displayLabel}</span>
-//             </button>
-//         );
-//     };
-
-//     // --- Reusable Mobile Navigation Button Component (Bottom Bar) ---
-//     const MobileNavButton = ({ sectionName, IconComponent, count = 0, label }: { sectionName: string, IconComponent: React.ElementType, count?: number, label: string }) => {
-//         const isActive = activeSection === sectionName;
-//         const colorClass = isActive ? 'text-purple-600' : 'text-gray-500 hover:text-purple-600';
-
-//         const isOwner = sectionName === 'dashboard';
-//         const activeBar = isOwner 
-//             ? 'border-gray-800' 
-//             : 'border-purple-600';
-
-//         return (
-//             <button
-//                 onClick={() => setActiveSection(sectionName)}
-//                 className={`flex flex-col items-center p-2 transition-colors duration-200 relative ${colorClass} w-full`}
-//             >
-//                 {isActive && <div className={`absolute top-0 w-8 h-1 rounded-b-full ${activeBar}`}></div>}
-//                 <IconComponent className="w-6 h-6" />
-//                 {count > 0 && sectionName === 'cart' && ( 
-//                     <span className="absolute top-1 right-3 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
-//                         {count}
-//                     </span>
-//                 )}
-//                 <span className="text-[10px] mt-1 font-semibold">{label}</span>
-//             </button>
-//         );
-//     };
-
-
-//     // --- RENDERING SECTIONS ---
-    
-//     // ====================================================================================
-//     // --- NEW: KITCHEN ORDER TICKET COMPONENT (FOR DASHBOARD) ---
-//     // ====================================================================================
-//     const KitchenOrderTicket = ({ order }: { order: Order }) => {
-//         // We use the `db` and `appId` from the main App component's scope
-//         const isWorkingOn = order.status === 'Pending Payment/Unpaid';
-//         const baseClasses = "p-4 shadow-lg rounded-xl transition-all duration-300 transform hover:scale-[1.01] flex flex-col justify-between";
-
-//         // Action Handlers
-//         const updateOrderStatus = useCallback(async (newStatus: string) => {
-//             try {
-//                 if (!db) { // Added check
-//                     console.error("Database not initialized");
-//                     return;
-//                 }
-//                 const orderDocRef = doc(db, `artifacts/${appId}/public/data/orders`, order.id);
-//                 await updateDoc(orderDocRef, {
-//                     status: newStatus,
-//                 });
-//             } catch (error: any) { // Modified catch
-//                 console.error("Error updating order status:", error);
-//                 if (error && error.message.includes('permission-denied')) {
-//                     setOrderStatus('db_permission_error_write'); // Use App's state setter
-//                 }
-//             }
-//         }, [order.id, db, appId]); // <-- ADDED db and appId dependencies
-
-//         const handlePickUp = useCallback(async () => {
-//             try {
-//                 if (!db) { // Added check
-//                     console.error("Database not initialized");
-//                     return;
-//                 }
-//                 const orderDocRef = doc(db, `artifacts/${appId}/public/data/orders`, order.id);
-//                 await deleteDoc(orderDocRef);
-//             } catch (error: any) { // Modified catch
-//                 console.error("Error deleting order:", error);
-//                 if (error && error.message.includes('permission-denied')) {
-//                     setOrderStatus('db_permission_error_write'); // Use App's state setter
-//                 }
-//             }
-//         }, [order.id, db, appId]); // <-- ADDED db and appId dependencies
-
-
-//         const handleDoneClick = () => updateOrderStatus('Done'); // Set status to 'Done'
-//         const handleMoveToWorkingOnClick = () => updateOrderStatus('Pending Payment/Unpaid'); // Set back to original status
-
-//         // Button Styling
-//         const btnClasses = "px-3 py-2 rounded-lg font-semibold transition duration-200 shadow-md flex items-center justify-center text-sm";
-
-//         return (
-//             <div className={`${baseClasses} ${isWorkingOn ? 'bg-amber-50 border-t-4 border-amber-500' : 'bg-green-50 border-t-4 border-green-500'}`}>
-//                 <div className="flex justify-between items-start mb-3">
-//                     <h3 className="text-lg font-bold text-gray-800">Order #{order.id.substring(0, 8)}</h3>
-//                     <p className={`text-xs font-medium px-2 py-1 rounded-full ${isWorkingOn ? 'bg-amber-200 text-amber-800' : 'bg-green-200 text-green-800'}`}>
-//                         {isWorkingOn ? 'WORKING ON' : 'READY'}
-//                     </p>
-//                 </div>
-
-//                 <p className="text-xl font-extrabold text-gray-900 mb-1">{order.customerName}</p>
-//                 <p className="text-xs text-gray-500 mb-1">
-//                     {order.timestamp?.seconds ? new Date(order.timestamp.seconds * 1000).toLocaleString() : 'N/A'}
-//                 </p>
-//                 <p className="text-lg font-bold text-purple-700 mb-3">${order.totalAmount.toFixed(2)}</p>
-
-//                 <ul className="list-disc pl-5 mb-4 text-gray-700 space-y-1 text-sm">
-//                     {order.items.map((item, index) => (
-//                         <li key={index} className="truncate">
-//                             {item.quantity}x <span className="font-bold">{item.name}</span>
-//                         </li>
-//                     ))}
-//                 </ul>
-//                 <p className="text-xs italic text-gray-600 mb-4">Instructions: {order.deliveryInstructions}</p>
-
-//                 <div className="mt-auto pt-4 border-t border-gray-200">
-//                     {isWorkingOn ? (
-//                         // Button for Working On section
-//                         <button
-//                             onClick={handleDoneClick}
-//                             className={`${btnClasses} w-full bg-emerald-600 text-white hover:bg-emerald-700`}
-//                         >
-//                             <CheckCheck className="w-5 h-5 mr-2" />
-//                             Order Done
-//                         </button>
-//                     ) : (
-//                         // Buttons for DONE section
-//                         <div className="flex space-x-2">
-//                             <button
-//                                 onClick={handleMoveToWorkingOnClick}
-//                                 className={`${btnClasses} flex-1 bg-sky-100 text-sky-800 hover:bg-sky-200`}
-//                             >
-//                                 <RefreshCw className="w-4 h-4 mr-1" />
-//                                 Back to Working On
-//                             </button>
-//                             <button
-//                                 onClick={handlePickUp}
-//                                 className={`${btnClasses} bg-red-500 text-white hover:bg-red-600`}
-//                             >
-//                                 <Trash2 className="w-4 h-4" />
-//                                 Picked up
-//                             </button>
-//                         </div>
-//                     )}
-//                 </div>
-//             </div>
-//         );
-//     };
-    
-//     // Order Card Renderer (Used in Dashboard) - THIS IS NOW REPLACED BY KitchenOrderTicket
-//     // const renderOrderCard = (order: Order) => ( ... ); // <-- Original function is no longer used by renderDashboard
-
-//     // Home Section Renderer
-//     const renderHome = () => (
-//         <div className="text-center py-16 px-4 bg-purple-50 rounded-2xl shadow-xl">
-//             <ChefHat className="w-16 h-16 mx-auto mb-4 text-purple-600" />
-//             <h2 className="text-6xl font-extrabold text-gray-900 font-serif mb-4">
-//                 The Saffron Table
-//             </h2>
-//             <p className="text-xl text-gray-600 mb-8 max-w-lg mx-auto">
-//                 Experience the rich flavors and aromatic traditions of authentic Persian cuisine. Order your feast now!
-//             </p>
-//             <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
-//                 <button
-//                     onClick={() => setActiveSection('menu')}
-//                     className="bg-purple-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-purple-700 transition transform hover:scale-105"
-//                 >
-//                     View Full Menu
-//                 </button>
-//                 <button
-//                     onClick={() => setActiveSection('dashboard')}
-//                     className="bg-gray-800 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-gray-900 transition transform hover:scale-105 flex items-center justify-center"
-//                 >
-//                     <ChefHat className="w-5 h-5 mr-2" /> Owner Dashboard
-//                 </button>
-//             </div>
-
-//             <div className="mt-12 pt-8 border-t border-purple-200">
-//                 <h3 className="text-2xl font-bold text-gray-800 mb-4">Contact Us</h3>
-//                 <div className="flex justify-center flex-wrap gap-6 text-gray-600">
-//                     <p className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-purple-600" /> 123 Saffron Lane, Tehrangeles, CA</p>
-//                     <p className="flex items-center"><Phone className="w-4 h-4 mr-2 text-purple-600" /> (555) 555-SAFR</p>
-//                     <p className="flex items-center"><Mail className="w-4 h-4 mr-2 text-purple-600" /> orders@saffrontable.com</p>
-//                 </div>
-//             </div>
-//         </div>
-//     );
-
-//     // Menu Section Renderer
-//     const renderMenu = () => (
-//         <div className="space-y-12">
-//             <h2 className="text-4xl font-extrabold text-gray-900 font-sans flex items-center">
-//                 <Utensils className="w-8 h-8 mr-3 text-purple-600" />
-//                 The Persian Feast Menu
-//             </h2>
-//             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-//                 {menuItems.map((item) => (
-//                     <div key={item.name} className="bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition duration-300 flex flex-col">
-//                         <img
-//                             src={item.image}
-//                             alt={item.name}
-//                             className="w-full h-48 object-cover object-center"
-//                             onError={(e) => {
-//                                 e.currentTarget.onerror = null;
-//                                 e.currentTarget.src = `https://placehold.co/400x192/E5E7EB/4B5563?text=${item.name.slice(0, 8)}...`;
-//                             }}
-//                         />
-//                         <div className="p-6 flex flex-col flex-grow">
-//                             <div className="flex justify-between items-start mb-2">
-//                                 <h3 className="text-2xl font-bold text-gray-900 font-serif">{item.name}</h3>
-//                                 <span className="text-xl font-extrabold text-purple-600">${item.price.toFixed(2)}</span>
-//                             </div>
-//                             <p className="text-gray-600 text-sm mb-4 flex-grow">{item.description}</p>
-
-//                             {/* AI Buttons */}
-//                             <div className="flex space-x-2 mb-4">
-//                                 <button
-//                                     onClick={() => generateDescription(item)}
-//                                     disabled={aiLoading}
-//                                     className="flex-1 text-xs px-3 py-1 bg-purple-100 text-purple-700 font-semibold rounded-full hover:bg-purple-200 transition disabled:bg-gray-200 disabled:text-gray-600 flex items-center justify-center"
-//                                 >
-//                                     {aiLoading && aiResult?.dishName === item.name && aiResult?.type === 'description' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <BookOpen className="w-4 h-4 mr-1" />}
-//                                     {!aiLoading || aiResult?.dishName !== item.name || aiResult?.type !== 'description' ? 'Poetic Description' : 'Loading...'}
-//                                 </button>
-//                                 <button
-//                                     onClick={() => generatePairing(item)}
-//                                     disabled={aiLoading}
-//                                     className="flex-1 text-xs px-3 py-1 bg-purple-100 text-purple-700 font-semibold rounded-full hover:bg-purple-200 transition disabled:bg-gray-200 disabled:text-gray-600 flex items-center justify-center"
-//                                 >
-//                                     {aiLoading && aiResult?.dishName === item.name && aiResult?.type === 'pairing' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <ChefHat className="w-4 h-4 mr-1" />}
-//                                     {!aiLoading || aiResult?.dishName !== item.name || aiResult?.type !== 'pairing' ? 'Pairing Suggestion' : 'Loading...'}
-//                                 </button>
-//                             </div>
-                            
-//                             {/* AI Result Display */}
-//                             {aiResult && aiResult.dishName === item.name && (
-//                                 <div className={`p-3 mt-2 rounded-lg text-sm ${aiResult.type === 'error' ? 'bg-red-100 text-red-800 border-l-4 border-red-500' : 'bg-green-50 text-green-800 border-l-4 border-green-500'}`}>
-//                                     {aiResult.type === 'error' && <AlertTriangle className="w-4 h-4 mr-2 inline" />}
-//                                     <div dangerouslySetInnerHTML={{ __html: aiResult.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
-//                                 </div>
-//                             )}
-
-//                             {/* Add to Cart Button */}
-//                             <button
-//                                 onClick={() => handleAddToCart(item)}
-//                                 className="mt-4 w-full bg-purple-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-purple-700 transition transform hover:scale-[1.01] flex items-center justify-center"
-//                             >
-//                                 <ShoppingCart className="w-5 h-5 mr-2" />
-//                                 Add to Cart
-//                             </button>
-//                         </div>
-//                     </div>
-//                 ))}
-//             </div>
-//         </div>
-//     );
-
-//     // Cart Section Renderer
-//     const renderCart = () => (
-//         <div className="space-y-8 max-w-4xl mx-auto">
-//             <h2 className="text-4xl font-extrabold text-gray-900 font-sans flex items-center">
-//                 <ShoppingCart className="w-8 h-8 mr-3 text-purple-600" />
-//                 Your Order Basket
-//             </h2>
-
-//             {cartItems.length === 0 ? (
-//                 <div className="text-center p-12 bg-gray-50 rounded-2xl shadow-inner">
-//                     <p className="text-xl text-gray-500 font-semibold">Your cart is currently empty. <span className="block text-sm font-normal pt-2">Head to the menu to start your Persian feast!</span></p>
-//                     <button
-//                         onClick={() => setActiveSection('menu')}
-//                         className="mt-6 bg-purple-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:bg-purple-700 transition"
-//                     >
-//                         View Menu
-//                     </button>
-//                 </div>
-//             ) : (
-//                 <div className="space-y-6">
-//                     <div className="bg-white rounded-2xl shadow-xl divide-y divide-purple-100 p-4">
-//                         {cartItems.map(item => (
-//                             <div key={item.name} className="flex items-center justify-between py-4">
-//                                 <div className="flex items-center space-x-4">
-//                                     <img
-//                                         src={item.image}
-//                                         alt={item.name}
-//                                         className="w-16 h-16 rounded-lg object-cover"
-//                                         onError={(e) => {
-//                                             e.currentTarget.onerror = null;
-//                                             e.currentTarget.src = `https://placehold.co/64x64/E5E7EB/4B5563?text=Dish`;
-//                                         }}
-//                                     />
-//                                     <div>
-//                                         <p className="font-semibold text-lg text-gray-900">{item.name}</p>
-//                                         <p className="text-sm text-gray-500">${item.price.toFixed(2)} each</p>
-//                                     </div>
-//                                 </div>
-                                
-//                                 <div className="flex items-center space-x-4">
-//                                     <div className="flex items-center border border-purple-300 rounded-full">
-//                                         <button
-//                                             onClick={() => updateQuantity(item.name, item.quantity - 1)}
-//                                             className="p-2 text-purple-600 hover:bg-purple-50 rounded-l-full transition"
-//                                         >
-//                                             <Minus className="w-4 h-4" />
-//                                         </button>
-//                                         <span className="px-3 font-semibold text-gray-800">{item.quantity}</span>
-//                                         <button
-//                                             onClick={() => updateQuantity(item.name, item.quantity + 1)}
-//                                             className="p-2 text-purple-600 hover:bg-purple-50 rounded-r-full transition"
-//                                         >
-//                                             <Plus className="w-4 h-4" />
-//                                         </button>
-//                                     </div>
-//                                     <button
-//                                         onClick={() => updateQuantity(item.name, 0)}
-//                                         className="p-2 text-red-500 hover:bg-red-50 rounded-full transition"
-//                                     >
-//                                         <XCircle className="w-5 h-5" />
-//                                     </button>
-//                                 </div>
-//                             </div>
-//                         ))}
-//                     </div>
-
-//                     <div className="bg-purple-50 p-6 rounded-2xl shadow-inner flex justify-between items-center">
-//                         <p className="text-xl font-bold text-gray-800">Order Subtotal:</p>
-//                         <p className="text-3xl font-extrabold text-purple-700">${calculateTotalFormatted()}</p>
-//                     </div>
-
-//                     <button
-//                         onClick={() => setActiveSection('checkout')}
-//                         className="w-full bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-green-600 transition transform hover:scale-[1.01] flex items-center justify-center text-xl"
-//                     >
-//                         <CreditCard className="w-6 h-6 mr-2" />
-//                         Proceed to Checkout
-//                     </button>
-//                 </div>
-//             )}
-//         </div>
-//     );
-
-//     // Checkout Section Renderer
-//     const renderCheckout = () => (
-//         <div className="space-y-8 max-w-xl mx-auto">
-//             <h2 className="text-4xl font-extrabold text-gray-900 font-sans flex items-center">
-//                 <ListOrdered className="w-8 h-8 mr-3 text-purple-600" />
-//                 Delivery & Payment
-//             </h2>
-
-//             <div className="bg-white p-8 rounded-2xl shadow-xl">
-//                 <form onSubmit={placeOrder} className="space-y-6">
-//                     <div className="bg-purple-50 p-4 rounded-xl border border-purple-200">
-//                         <p className="text-lg font-bold text-purple-800 mb-2">Order Summary</p>
-//                         <div className="flex justify-between text-gray-700 text-sm">
-//                             <span>{cartItems.length} items</span>
-//                             <span className="text-xl font-extrabold text-purple-700">${calculateTotalFormatted()}</span>
-//                         </div>
-//                     </div>
-
-//                     <h3 className="text-xl font-bold text-gray-800 pt-2 border-t border-gray-100">Contact & Delivery</h3>
-
-//                     <div className="space-y-4">
-//                         <input
-//                             type="text"
-//                             placeholder="* Full Name"
-//                             value={customerInfo.name}
-//                             onChange={(e) => setCustomerInfo(p => ({ ...p, name: e.target.value }))}
-//                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
-//                             required
-//                         />
-//                         <input
-//                             type="tel"
-//                             placeholder="* Phone Number (e.g., 555-123-4567)"
-//                             value={customerInfo.phone}
-//                             onChange={(e) => setCustomerInfo(p => ({ ...p, phone: e.target.value }))}
-//                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
-//                             required
-//                         />
-//                         <input
-//                             type="email"
-//                             placeholder="Email (Optional)"
-//                             value={customerInfo.email}
-//                             onChange={(e) => setCustomerInfo(p => ({ ...p, email: e.target.value }))}
-//                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
-//                         />
-//                         <textarea
-//                             placeholder="Delivery Instructions (e.g., House number, street name, no nuts please)"
-//                             value={customerInfo.instructions}
-//                             onChange={(e) => setCustomerInfo(p => ({ ...p, instructions: e.target.value }))}
-//                             rows={3}
-//                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
-//                         />
-//                     </div>
-
-//                     <div className="p-4 bg-yellow-100 rounded-xl flex items-start space-x-3">
-//                         <DollarSign className="w-5 h-5 text-yellow-700 mt-1 flex-shrink-0" />
-//                         <p className="text-sm text-yellow-800 font-semibold">
-//                             Payment Method: Cash or Card upon Pickup/Delivery. <br/>
-//                             <span className="font-normal italic">Your order will be placed in the system as "Pending Payment."</span>
-//                         </p>
-//                     </div>
-
-//                     <button
-//                         type="submit"
-//                         disabled={isPlacingOrder || cartItems.length === 0}
-//                         className="w-full bg-purple-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-purple-700 transition transform hover:scale-[1.01] disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center text-xl"
-//                     >
-//                         {isPlacingOrder ? (
-//                             <><Loader2 className="animate-spin mr-2 w-6 h-6" /> Placing Order...</>
-//                         ) : (
-//                             <><CheckCheck className="w-6 h-6 mr-2" /> Confirm & Place Order</>
-//                         )}
-//                     </button>
-//                 </form>
-//             </div>
-
-//             <button
-//                 onClick={() => setActiveSection('cart')}
-//                 className="w-full text-sm text-gray-500 hover:text-purple-600 transition font-medium flex items-center justify-center pt-2"
-//             >
-//                 &larr; Back to Cart
-//             </button>
-//         </div>
-//     );
-
-//     // ====================================================================================
-//     // --- MODIFIED: Dashboard Section Renderer ---
-//     // ====================================================================================
-//     const renderDashboard = () => {
-//         // Filter orders based on status
-//         const workingOnOrders = orders.filter(o => o.status === 'Pending Payment/Unpaid');
-//         const doneOrders = orders.filter(o => o.status === 'Done');
-
-//         return (
-//             <div className="space-y-8">
-//                 {/* This is your original header and info box, unchanged */}
-//                 <h2 className="text-4xl font-extrabold text-gray-900 font-sans flex items-center">
-//                     <ChefHat className="w-8 h-8 mr-3 text-gray-800" />
-//                     Kitchen Order Dashboard ({orders.length} Total)
-//                 </h2>
-//                 <div className="p-4 bg-gray-100 rounded-xl shadow-inner">
-//                     <p className="text-sm font-semibold text-gray-700 mb-2">System Info:</p>
-//                     <div className="flex flex-wrap text-xs text-gray-600 font-mono space-x-4">
-//                         <span>App ID: <span className="font-bold text-gray-800">{appId}</span></span>
-//                         <span>User ID (Current Viewer): <span className="font-bold text-gray-800">{userId?.substring(0, 8) || 'N/A'}...</span></span>
-//                     </div>
-//                     <p className="text-xs text-gray-500 mt-2">This is the new real-time kitchen workflow. New orders appear in "Working On".</p>
-//                     <p className="text-sm text-red-600 mt-3 font-semibold">
-//                         ⚠️ If no orders appear, ensure your Firestore Security Rules allow `read` access to `artifacts/{appId}/public/data/orders`.
-//                     </p>
-//                 </div>
-
-//                 {/* --- NEW: Two-Column Workflow Layout --- */}
-//                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-7xl mx-auto">
-//                     {/* --- Working On Column --- */}
-//                     <div className="bg-white p-5 rounded-xl shadow-2xl">
-//                         <h2 className="text-2xl font-bold text-amber-700 border-b-4 border-amber-500 pb-2 mb-4 flex items-center">
-//                             <Loader2 className="w-5 h-5 mr-2 text-amber-500" /> {/* <-- REMOVED animate-spin */}
-//                             Working On ({workingOnOrders.length})
-//                         </h2>
-//                         <div className="space-y-4">
-//                             {workingOnOrders.length === 0 ? (
-//                                 <p className="text-gray-500 p-4 bg-amber-50 rounded-lg italic">
-//                                     No new orders to prepare.
-//                                 </p>
-//                             ) : (
-//                                 workingOnOrders.map(order => (
-//                                     <KitchenOrderTicket key={order.id} order={order} />
-//                                 ))
-//                             )}
-//                         </div>
-//                     </div>
-
-//                     {/* --- DONE Column --- */}
-//                     <div className="bg-white p-5 rounded-xl shadow-2xl">
-//                         <h2 className="text-2xl font-bold text-green-700 border-b-4 border-green-500 pb-2 mb-4 flex items-center">
-//                             <CheckCheck className="w-5 h-5 mr-2 text-green-500" />
-//                             DONE (Ready for Pickup) ({doneOrders.length})
-//                         </h2>
-//                         <div className="space-y-4">
-//                             {doneOrders.length === 0 ? (
-//                                 <p className="text-gray-500 p-4 bg-green-50 rounded-lg italic">
-//                                     Completed orders will appear here.
-//                                 </p>
-//                             ) : (
-//                                 doneOrders.map(order => (
-//                                     <KitchenOrderTicket key={order.id} order={order} />
-//                                 ))
-//                             )}
-//                         </div>
-//                     </div>
-//                 </div>
-//             </div>
-//         );
-//     };
-
-//     const renderContent = () => {
-//         switch (activeSection) {
-//             case 'home':
-//                 return renderHome();
-//             case 'menu':
-//                 return renderMenu();
-//             case 'cart':
-//                 return renderCart();
-//             case 'checkout':
-//                 return renderCheckout();
-//             case 'dashboard':
-//                 return renderDashboard();
-//             default:
-//                 return renderHome();
-//         }
-//     };
-    
-//     // Main component return structure
-//     return (
-//         <div className="min-h-screen bg-gray-100 font-sans flex flex-col">
-//             <OrderStatusMessage status={orderStatus} />
-
-//             {/* Desktop Sidebar Navigation (Hidden on Mobile) */}
-//             <div className="hidden md:flex bg-white shadow-xl p-6 border-r border-gray-200 fixed top-0 left-0 h-full flex-col space-y-6 z-10 w-[140px] lg:w-[180px]">
-//                 <div className="text-center py-4">
-//                     <h1 className="text-3xl font-extrabold text-purple-700 font-serif">Saffron</h1>
-//                     <h2 className="text-sm text-gray-500">The Table</h2>
-//                 </div>
-                
-//                 <div className="flex flex-col space-y-6 flex-grow">
-//                     <NavButton sectionName="home" label="Home" IconComponent={Home} />
-//                     <NavButton sectionName="menu" label="Menu" IconComponent={BookOpen} />
-//                     <NavButton sectionName="cart" label="Cart" IconComponent={ShoppingCart} count={cartItems.length} />
-//                     {cartItems.length > 0 && (
-//                         <NavButton sectionName="checkout" label="Checkout" IconComponent={DollarSign} />
-//                     )}
-//                 </div>
-
-//                 {/* Owner Dashboard - Styled Differently */}
-//                 <div className="pt-6 border-t border-gray-200">
-//                     <NavButton sectionName="dashboard" label="Dashboard" IconComponent={ChefHat} count={orders.length} isOwner={true} />
-//                 </div>
-//             </div>
-
-//             {/* Main Content Area */}
-//             <main className="flex-grow p-4 md:p-8 md:ml-[140px] lg:ml-[180px] mt-16 md:mt-0">
-//                 {isAppReady ? (
-//                     <div className="container mx-auto max-w-7xl pt-4 pb-20 md:pb-0">
-//                         {renderContent()}
-//                     </div>
-//                 ) : (
-//                     <div className="flex items-center justify-center h-full min-h-[50vh] text-purple-600 text-xl font-semibold">
-//                         <Loader2 className="animate-spin mr-3" size={32} /> Loading Application...
-//                     </div>
-//                 )}
-//             </main>
-
-//             {/* Mobile Bottom Navigation (Hidden on Desktop) */}
-//             <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-20">
-//                 <div className="flex justify-around items-center h-16">
-//                     <MobileNavButton sectionName="home" label="Home" IconComponent={Home} />
-//                     <MobileNavButton sectionName="menu" label="Menu" IconComponent={BookOpen} />
-//                     <MobileNavButton sectionName="cart" label="Cart" IconComponent={ShoppingCart} count={cartItems.length} />
-//                     <MobileNavButton sectionName="dashboard" label="Owner" IconComponent={ChefHat} />
-//                 </div>
-//             </div>
-//         </div>
-//     );
-// }
-
-
-
-
-
-
-
-// import React, { useState, useEffect, useCallback, useMemo } from 'react';
-// // Check this line carefully: all these icons must be present.
-// import { ChefHat, Utensils, Home, BookOpen, ShoppingCart, Plus, Minus, XCircle, DollarSign, ListOrdered, Loader2, CheckCheck, CreditCard, MapPin, Phone, Mail, AlertTriangle, RefreshCw, Trash2, KeyRound } from 'lucide-react'; 
-
-// // --- FIREBASE IMPORTS & SETUP ---
-// import { initializeApp } from 'firebase/app';
-// import { 
-//     getAuth, 
-//     signInAnonymously, 
-//     onAuthStateChanged, 
-//     signInWithCustomToken,
-//     signInWithEmailAndPassword, // <-- Import for owner sign-in
-// } from 'firebase/auth';
-// // CRITICAL FIX: Import 'User' as a type separately to resolve Vite/ESM SyntaxError
-// import type { User } from 'firebase/auth'; 
-// import {
-//     getFirestore,
-//     collection,
-//     addDoc,
-//     query,
-//     onSnapshot,
-//     serverTimestamp,
-//     setLogLevel,
-//     doc,
-//     updateDoc,
-//     deleteDoc
-// } from 'firebase/firestore';
-
-// // ====================================================================================
-// // CRITICAL: FIREBASE CONFIGURATION (DO NOT MODIFY GLOBAL VARIABLE CHECK)
-// // ====================================================================================
-
-// // Retrieve globals from Canvas environment or default to empty/null if running locally.
-// const canvasFirebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-// const canvasInitialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-// const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
-// // If running locally, you must provide your config here:
-// const firebaseConfig = Object.keys(canvasFirebaseConfig).length > 0
-//     ? canvasFirebaseConfig
-//     : {
-//           // 🚀 FIX: Placeholder values to ensure initialization. REPLACE THESE if running outside Canvas.
-//           // Your current project ID is: saffron-41b76
-//           apiKey: "AIzaSyCZjRhhYlse6zb6e0z729vXEFyIifKOEgM",
-//           authDomain: "saffron-41b76.firebaseapp.com",
-//           projectId: "saffron-41b76", // THIS IS CRITICAL FOR FIRESTORE
-//           storageBucket: "saffron-41b76.appspot.com",
-//           messagingSenderId: "1234567890",
-//           appId: "1:1234567890:web:abcdef1234567890",
-//       };
-
-// const initialAuthToken = canvasInitialAuthToken;
-// setLogLevel('debug'); // Enable Firestore logging
-
-// // --- Gemini API Constants ---
-// const apiKey = ""; // Leave as empty string for Canvas execution or replace with your key
-// const LLM_MODEL = "gemini-2.5-flash-preview-05-20";
-
-// // --- TYPE DEFINITIONS for TypeScript Safety ---
-
-// interface MenuItem {
-//     name: string;
-//     description: string;
-//     price: number;
-//     image: string;
-// }
-
-// interface CartItem extends MenuItem {
-//     quantity: number;
-// }
-
-// interface OrderItem {
-//     name: string;
-//     quantity: number;
-//     price: number;
-//     subtotal: number;
-// }
-
-// interface FirestoreTimestamp {
-//     seconds: number;
-//     nanoseconds: number;
-// }
-
-// interface Order {
-//     id: string;
-//     userId: string;
-//     customerName: string;
-//     customerPhone: string;
-//     customerEmail: string;
-//     deliveryInstructions: string;
-//     items: OrderItem[];
-//     totalAmount: number;
-//     status: string; // This will be 'Pending Payment/Unpaid' or 'Done'
-//     payment: { method: string; transactionId: string };
-//     timestamp: FirestoreTimestamp | null;
-// }
-
-// type AiResult = {
-//     dishName: string;
-//     type: 'description' | 'pairing' | 'error';
-//     text: string;
-// } | null;
-
-// interface OrderAiResult {
-//     summary: string;
-//     actions: string[];
-// }
-
-// // Mock Menu Data (Typed)
-// const menuItems: MenuItem[] = [
-//     { name: 'Kabab Koobideh', description: 'Two skewers of seasoned ground meat, grilled to perfection, served with saffron rice.', price: 20.00, image: 'https://placehold.co/192x192/4F46E5/FFFFFF?text=Kabab' },
-//     { name: 'Ghormeh Sabzi', description: 'A rich and savory herb stew with kidney beans, dried lime, and lamb shank.', price: 18.50, image: 'https://placehold.co/192x192/8B5CF6/FFFFFF?text=Sabzi' },
-//     { name: 'Fesenjan', description: 'A delightful, slightly sweet and sour stew of chicken, ground walnuts, and pomegranate paste.', price: 22.00, image: 'https://placehold.co/192x192/6D28D9/FFFFFF?text=Fesenjan' },
-//     { name: 'Tahdig', description: 'The crispy, golden layer of rice from the bottom of the pot, often considered a delicacy.', price: 8.00, image: 'https://placehold.co/192x192/A78BFA/FFFFFF?text=Tahdig' },
-//     { name: 'Barg Kabab', description: 'Thinly sliced lamb or beef tenderloin marinated in lemon juice and onion, grilled on a skewer.', price: 25.00, image: 'https://placehold.co/192x192/8B5CF6/FFFFFF?text=Barg' },
-//     { name: 'Zereshk Polo', description: 'Steamed rice with bright red barberries and saffron, traditionally served with roasted chicken.', price: 19.00, image: 'https://placehold.co/192x192/4F46E5/FFFFFF?text=Polo' },
-// ];
-
-// // ====================================================================================
-// // NEW COMPONENT: OWNER SIGN-IN MODAL
-// // ====================================================================================
-// interface OwnerSignInModalProps {
-//     auth: any;
-//     isOpen: boolean;
-//     onClose: () => void;
-//     onSuccess: () => void;
-// }
-
-// const OwnerSignInModal: React.FC<OwnerSignInModalProps> = ({ auth, isOpen, onClose, onSuccess }) => {
-//     const [email, setEmail] = useState('');
-//     const [password, setPassword] = useState('');
-//     const [error, setError] = useState<string | null>(null);
-//     const [isLoading, setIsLoading] = useState(false);
-
-//     if (!isOpen) return null;
-
-//     const handleSignIn = async (e: React.FormEvent) => {
-//         e.preventDefault();
-//         setError(null);
-//         setIsLoading(true);
-
-//         try {
-//             await signInWithEmailAndPassword(auth, email, password);
-//             onSuccess(); // Close modal and proceed to dashboard
-//         } catch (err: any) {
-//             console.error("Owner Sign-In Error:", err);
-//             // Translate Firebase Auth error codes for a better user experience
-//             if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-//                 setError('Invalid username or password. Please try again.');
-//             } else if (err.code === 'auth/too-many-requests') {
-//                 setError('Access temporarily blocked due to too many failed attempts.');
-//             } else {
-//                 setError('Authentication failed. Check your network or contact support.');
-//             }
-//         } finally {
-//             setIsLoading(false);
-//         }
-//     };
-
-//     return (
-//         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4" onClick={onClose}>
-//             <div 
-//                 className="bg-white rounded-2xl p-8 shadow-2xl max-w-sm w-full relative"
-//                 onClick={(e) => e.stopPropagation()} // Prevent modal from closing when clicking inside
-//             >
-//                 <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
-//                     <XCircle className="w-6 h-6" />
-//                 </button>
-                
-//                 <KeyRound className="w-10 h-10 mx-auto mb-4 text-gray-800" />
-//                 <h3 className="text-2xl font-bold text-center text-gray-900 mb-6">Owner Sign-In</h3>
-                
-//                 <form onSubmit={handleSignIn} className="space-y-4">
-//                     <input
-//                         type="email"
-//                         placeholder="Username (Email)"
-//                         value={email}
-//                         onChange={(e) => setEmail(e.target.value)}
-//                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-gray-500 focus:border-gray-500"
-//                         required
-//                     />
-//                     <input
-//                         type="password"
-//                         placeholder="Password"
-//                         value={password}
-//                         onChange={(e) => setPassword(e.target.value)}
-//                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-gray-500 focus:border-gray-500"
-//                         required
-//                     />
-                    
-//                     {error && (
-//                         <div className="p-3 text-sm bg-red-100 text-red-700 rounded-lg border border-red-300">
-//                             {error}
-//                         </div>
-//                     )}
-
-//                     <button
-//                         type="submit"
-//                         disabled={isLoading}
-//                         className="w-full bg-gray-800 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-gray-900 transition disabled:bg-gray-400 flex items-center justify-center"
-//                     >
-//                         {isLoading ? (
-//                             <><Loader2 className="animate-spin mr-2 w-5 h-5" /> Signing In...</>
-//                         ) : (
-//                             'Sign In to Dashboard'
-//                         )}
-//                     </button>
-//                 </form>
-//             </div>
-//         </div>
-//     );
-// };
-// // ====================================================================================
-
-// // ====================================================================================
-// // --- KITCHEN ORDER TICKET COMPONENT (FOR DASHBOARD) ---
-// // ====================================================================================
-// interface KitchenOrderTicketProps {
-//     order: Order;
-//     db: any; // Passed from parent
-//     appId: string; // Passed from parent
-//     setOrderStatus: (status: string | null) => void; // Passed from parent
-// }
-
-// const KitchenOrderTicket: React.FC<KitchenOrderTicketProps> = ({ order, db, appId, setOrderStatus }) => {
-//     const isWorkingOn = order.status === 'Pending Payment/Unpaid';
-//     const baseClasses = "p-4 shadow-lg rounded-xl transition-all duration-300 transform hover:scale-[1.01] flex flex-col justify-between";
-
-//     // Action Handlers
-//     const updateOrderStatus = useCallback(async (newStatus: string) => {
-//         try {
-//             if (!db) {
-//                 console.error("Database not initialized");
-//                 return;
-//             }
-//             const orderDocRef = doc(db, `artifacts/${appId}/public/data/orders`, order.id);
-//             await updateDoc(orderDocRef, {
-//                 status: newStatus,
-//             });
-//         } catch (error: any) {
-//             console.error("Error updating order status:", error);
-//             if (error && error.message.includes('permission-denied')) {
-//                 setOrderStatus('db_permission_error_write');
-//             }
-//         }
-//     }, [order.id, db, appId, setOrderStatus]);
-
-//     const handlePickUp = useCallback(async () => {
-//         try {
-//             if (!db) {
-//                 console.error("Database not initialized");
-//                 return;
-//             }
-//             const orderDocRef = doc(db, `artifacts/${appId}/public/data/orders`, order.id);
-//             await deleteDoc(orderDocRef);
-//         } catch (error: any) {
-//             console.error("Error deleting order:", error);
-//             if (error && error.message.includes('permission-denied')) {
-//                 setOrderStatus('db_permission_error_write');
-//             }
-//         }
-//     }, [order.id, db, appId, setOrderStatus]);
-
-
-//     const handleDoneClick = () => updateOrderStatus('Done');
-//     const handleMoveToWorkingOnClick = () => updateOrderStatus('Pending Payment/Unpaid');
-
-//     // Button Styling
-//     const btnClasses = "px-3 py-2 rounded-lg font-semibold transition duration-200 shadow-md flex items-center justify-center text-sm";
-
-//     return (
-//         <div className={`${baseClasses} ${isWorkingOn ? 'bg-amber-50 border-t-4 border-amber-500' : 'bg-green-50 border-t-4 border-green-500'}`}>
-//             <div className="flex justify-between items-start mb-3">
-//                 <h3 className="text-lg font-bold text-gray-800">Order #{order.id.substring(0, 8)}</h3>
-//                 <p className={`text-xs font-medium px-2 py-1 rounded-full ${isWorkingOn ? 'bg-amber-200 text-amber-800' : 'bg-green-200 text-green-800'}`}>
-//                     {isWorkingOn ? 'WORKING ON' : 'READY'}
-//                 </p>
-//             </div>
-
-//             <p className="text-xl font-extrabold text-gray-900 mb-1">{order.customerName}</p>
-//             <p className="text-xs text-gray-500 mb-1">
-//                 {order.timestamp?.seconds ? new Date(order.timestamp.seconds * 1000).toLocaleString() : 'N/A'}
-//             </p>
-//             <p className="text-lg font-bold text-purple-700 mb-3">${order.totalAmount.toFixed(2)}</p>
-
-//             <ul className="list-disc pl-5 mb-4 text-gray-700 space-y-1 text-sm">
-//                 {order.items.map((item, index) => (
-//                     <li key={index} className="truncate">
-//                         {item.quantity}x <span className="font-bold">{item.name}</span>
-//                     </li>
-//                 ))}
-//             </ul>
-//             <p className="text-xs italic text-gray-600 mb-4">Instructions: {order.deliveryInstructions}</p>
-
-//             <div className="mt-auto pt-4 border-t border-gray-200">
-//                 {isWorkingOn ? (
-//                     // Button for Working On section
-//                     <button
-//                         onClick={handleDoneClick}
-//                         className={`${btnClasses} w-full bg-emerald-600 text-white hover:bg-emerald-700`}
-//                     >
-//                         <CheckCheck className="w-5 h-5 mr-2" />
-//                         Order Done
-//                     </button>
-//                 ) : (
-//                     // Buttons for DONE section
-//                     <div className="flex space-x-2">
-//                         <button
-//                             onClick={handleMoveToWorkingOnClick}
-//                             className={`${btnClasses} flex-1 bg-sky-100 text-sky-800 hover:bg-sky-200`}
-//                         >
-//                             <RefreshCw className="w-4 h-4 mr-1" />
-//                             Back to Working On
-//                         </button>
-//                         <button
-//                             onClick={handlePickUp}
-//                             className={`${btnClasses} bg-red-500 text-white hover:bg-red-600`}
-//                         >
-//                             <Trash2 className="w-4 h-4" />
-//                             Picked up
-//                         </button>
-//                     </div>
-//                 )}
-//             </div>
-//         </div>
-//     );
-// };
-// // ====================================================================================
-
-// export default function App() {
-//     // --- STATE VARIABLES (Typed) ---
-//     const [activeSection, setActiveSection] = useState('home');
-//     const [cartItems, setCartItems] = useState<CartItem[]>([]);
-//     const [db, setDb] = useState<any>(null); // Use 'any' for Firestore instance as it's complex
-//     const [auth, setAuth] = useState<any>(null); // Use 'any' for Auth instance
-//     const [userId, setUserId] = useState<string | null>(null);
-//     const [orders, setOrders] = useState<Order[]>([]);
-//     const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-//     const [orderStatus, setOrderStatus] = useState<string | null>(null);
-//     const [isAppReady, setIsAppReady] = useState(false);
-    
-//     // --- NEW: Authentication State for Owner Dashboard ---
-//     const [isOwnerAuthenticated, setIsOwnerAuthenticated] = useState(false);
-//     const [showSignInModal, setShowSignInModal] = useState(false);
-//     // Track the current Firebase User object to check the type of user
-//     const [currentUser, setCurrentUser] = useState<User | null>(null);
-
-//     // --- AI State for Menu ---
-//     const [aiResult, setAiResult] = useState<AiResult>(null);
-//     const [aiLoading, setAiLoading] = useState(false);
-
-//     // --- AI State for Orders (Record<OrderId, Result>) ---
-//     const [orderAiResult, setOrderAiResult] = useState<Record<string, OrderAiResult>>({});
-//     const [orderAiLoadingId, setOrderAiLoadingId] = useState<string | null>(null);
-
-//     const [customerInfo, setCustomerInfo] = useState({
-//         name: '', email: '', phone: '', instructions: ''
-//     });
-
-//     // 1. Initialize Firebase and Handle Auth 
-//     useEffect(() => {
-//         let cleanup: (() => void) | undefined;
-        
-//         const isConfigValid = firebaseConfig && Object.keys(firebaseConfig).length > 0 && firebaseConfig.projectId;
-
-//         if (isConfigValid) {
-//             try {
-//                 const app = initializeApp(firebaseConfig);
-//                 const firestore = getFirestore(app);
-//                 setDb(firestore);
-
-//                 const firebaseAuth = getAuth(app);
-//                 setAuth(firebaseAuth);
-
-//                 const unsubscribeAuth = onAuthStateChanged(firebaseAuth, async (user) => {
-//                     setCurrentUser(user); // Store the current user object
-                    
-//                     if (user && !user.isAnonymous) {
-//                          // User is signed in with email/password (or other method) -> Assume owner
-//                         setIsOwnerAuthenticated(true);
-//                         setUserId(user.uid);
-//                     } else if (user && user.isAnonymous) {
-//                          // User is signed in anonymously (customer)
-//                         setIsOwnerAuthenticated(false);
-//                         setUserId(user.uid);
-//                     } else {
-//                         // No user, sign in anonymously for public functionality
-//                         try {
-//                             if (initialAuthToken) {
-//                                 await signInWithCustomToken(firebaseAuth, initialAuthToken);
-//                             } else {
-//                                 await signInAnonymously(firebaseAuth);
-//                             }
-//                         } catch (e) {
-//                             console.error("Authentication failed during sign-in:", e);
-//                             const tempId = crypto.randomUUID();
-//                             setUserId(tempId); 
-//                         }
-//                     }
-
-//                     if (firestore) {
-//                         setIsAppReady(true);
-//                     }
-//                 });
-
-//                 cleanup = () => unsubscribeAuth();
-//             } catch (error) {
-//                 console.error("Firebase initialization failed. Check your config object structure:", error);
-//                 setDb(null);
-//                 setUserId(crypto.randomUUID());
-//                 setIsAppReady(true);
-//             }
-//         } else {
-//             console.warn("Firebase config is missing or invalid. Database features will be disabled.");
-//             setDb(null);
-//             setUserId(crypto.randomUUID());
-//             setIsAppReady(true);
-//         }
-
-//         return cleanup;
-//     }, []);
-
-//     // 2. Real-time Order Tracking (Owner Dashboard)
-//     useEffect(() => {
-//         // Only run if DB is initialized and App is ready
-//         if (db && userId && isAppReady && appId) {
-//             // Public path for collaborative data: /artifacts/{appId}/public/data/orders
-//             const ordersPath = `artifacts/${appId}/public/data/orders`;
-
-//             // NOTE: orderBy is intentionally omitted to avoid requiring index creation
-//             const q = query(collection(db, ordersPath));
-
-//             const unsubscribe = onSnapshot(q, (snapshot) => {
-//                 const fetchedOrders: Order[] = [];
-//                 snapshot.forEach((doc) => {
-//                     fetchedOrders.push({ id: doc.id, ...(doc.data() as Omit<Order, 'id'>) });
-//                 });
-                
-//                 // Client-side sorting by timestamp (newest first)
-//                 fetchedOrders.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
-//                 setOrders(fetchedOrders);
-//             }, (error) => {
-//                 // This handles the previous LISTEN 400 error (Permission Denied for read)
-//                 console.error("Error fetching orders (check read permissions):", error);
-//                 if (error && error.message.includes('permission-denied')) {
-//                     setOrderStatus('db_permission_error_read');
-//                     setTimeout(() => setOrderStatus(null), 5000);
-//                 }
-//             });
-
-//             return () => unsubscribe();
-//         }
-//     }, [db, userId, isAppReady]);
-
-//     // 3. GEMINI API Logic (General Text Output) ---
-//     const callGeminiApi = useCallback(async (systemPrompt: string, userQuery: string, retries = 3): Promise<string> => {
-        
-//         // This check handles cases where the user has not replaced the placeholder key
-//         if (apiKey === "YOUR_GEMINI_API_KEY_HERE" || apiKey === "") {
-//             return "AI feature disabled: Please provide a valid Gemini API key.";
-//         }
-
-//         setAiLoading(true);
-//         setAiResult(null);
-
-//         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${apiKey}`;
-
-//         const payload = {
-//             contents: [{ parts: [{ text: userQuery }] }],
-//             systemInstruction: {
-//                 parts: [{ text: systemPrompt }]
-//             },
-//         };
-
-//         for (let attempt = 0; attempt < retries; attempt++) {
-//             try {
-//                 const response = await fetch(apiUrl, {
-//                     method: 'POST',
-//                     headers: { 'Content-Type': 'application/json' },
-//                     body: JSON.stringify(payload)
-//                 });
-
-//                 if (!response.ok) {
-//                     throw new Error(`HTTP error! status: ${response.status}`);
-//                 }
-
-//                 const result = await response.json();
-//                 const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-//                 if (text) {
-//                     setAiLoading(false);
-//                     return text;
-//                 }
-//                 throw new Error("API response text missing.");
-
-//             } catch (error) {
-//                 console.error(`Attempt ${attempt + 1} failed:`, error);
-//                 if (attempt < retries - 1) {
-//                     const delay = Math.pow(2, attempt) * 1000;
-//                     await new Promise(res => setTimeout(res, delay));
-//                 } else {
-//                     setAiLoading(false);
-//                     return "Sorry, the AI service is currently unavailable. Please try again later.";
-//                 }
-//             }
-//         }
-//         setAiLoading(false);
-//         return "An unexpected error occurred.";
-//     }, [apiKey]);
-
-//     const generateDescription = useCallback(async (item: MenuItem) => {
-//         if (aiLoading) return;
-//         setAiResult({ dishName: item.name, type: 'description', text: "" }); // Reset result for current dish
-//         const systemPrompt = "You are a poetic, high-end restaurant copywriter specializing in Persian cuisine. Generate a single, captivating, and sensory description (max 2 sentences) for a menu item. Do not mention price or ingredients directly in the response, focus purely on the experience.";
-//         const userQuery = `Generate an alternative description for the dish: ${item.name} which is currently described as: "${item.description}"`;
-//         const resultText = await callGeminiApi(systemPrompt, userQuery);
-
-//         if (resultText && !resultText.includes("AI feature disabled")) {
-//             setAiResult({ dishName: item.name, type: 'description', text: resultText });
-//         } else if (resultText.includes("AI feature disabled")) {
-//             setAiResult({ dishName: item.name, type: 'error', text: resultText });
-//         }
-//     }, [aiLoading, callGeminiApi]);
-
-//     const generatePairing = useCallback(async (item: MenuItem) => {
-//         if (aiLoading) return;
-//         setAiResult({ dishName: item.name, type: 'pairing', text: "" }); // Reset result for current dish
-//         const systemPrompt = "You are a sommelier and culinary expert. Suggest one ideal pairing (either a drink like Doogh or a side dish like Salad Shirazi) for the following Persian dish and provide a single, short justification why it pairs well (max 2 sentences). Start the response with the suggested item name in bold, followed by the justification. Use Markdown for bolding.";
-//         const userQuery = `Suggest a pairing for the Persian dish: ${item.name} which has the description: "${item.description}"`;
-//         const resultText = await callGeminiApi(systemPrompt, userQuery);
-
-//         if (resultText && !resultText.includes("AI feature disabled")) {
-//             setAiResult({ dishName: item.name, type: 'pairing', text: resultText });
-//         } else if (resultText.includes("AI feature disabled")) {
-//             setAiResult({ dishName: item.name, type: 'error', text: resultText });
-//         }
-//     }, [aiLoading, callGeminiApi]);
-
-//     // 4. GEMINI API Logic (Structured JSON Output for Orders) ---
-//     const generateOrderSummaryAndActions = useCallback(async (order: Order, retries = 3) => {
-//         if (orderAiLoadingId === order.id) return;
-
-//         if (apiKey === "YOUR_GEMINI_API_KEY_HERE" || apiKey === "") {
-//             setOrderAiResult(prev => ({
-//                 ...prev,
-//                 [order.id]: {
-//                     summary: "AI feature disabled: Provide a valid Gemini API key.",
-//                     actions: ["Manually review order details."]
-//                 }
-//             }));
-//             return;
-//         }
-
-//         setOrderAiLoadingId(order.id);
-//         const orderDetails = order.items.map(item => `${item.quantity}x ${item.name}`).join('; ');
-//         const userQuery = `Analyze the following restaurant order and provide a concise summary and key action items for the kitchen. Order details: ${orderDetails}. Customer name: ${order.customerName}. Special instructions: ${order.deliveryInstructions || 'None'}`;
-//         const systemPrompt = "You are a professional kitchen manager. Your task is to analyze a raw order list and convert it into a concise summary for front-of-house staff (one short paragraph) and a list of urgent, practical action items for the kitchen chef. The output must be in JSON format.";
-//         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${apiKey}`;
-
-//         const payload = {
-//             contents: [{ parts: [{ text: userQuery }] }],
-//             systemInstruction: { parts: [{ text: systemPrompt }] },
-//             tools: [{ "google_search": {} }], // Adding search grounding for context on dishes, though primary use is JSON structure
-//             generationConfig: {
-//                 responseMimeType: "application/json",
-//                 responseSchema: {
-//                     type: "OBJECT",
-//                     properties: {
-//                         "summary": { "type": "STRING", description: "A one-sentence summary of the order for front-of-house." },
-//                         "actions": {
-//                             "type": "ARRAY",
-//                             "items": { "type": "STRING" },
-//                             description: "A list of critical, action-oriented instructions for the kitchen."
-//                         }
-//                     },
-//                     "propertyOrdering": ["summary", "actions"]
-//                 }
-//             }
-//         };
-
-//         for (let attempt = 0; attempt < retries; attempt++) {
-//             try {
-//                 const response = await fetch(apiUrl, {
-//                     method: 'POST',
-//                     headers: { 'Content-Type': 'application/json' },
-//                     body: JSON.stringify(payload)
-//                 });
-
-//                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-//                 const result = await response.json();
-//                 const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-//                 if (jsonText) {
-//                     const parsedJson = JSON.parse(jsonText) as OrderAiResult;
-//                     setOrderAiResult(prev => ({
-//                         ...prev,
-//                         [order.id]: {
-//                             summary: parsedJson.summary,
-//                             actions: parsedJson.actions
-//                         }
-//                     }));
-//                     setOrderAiLoadingId(null);
-//                     return;
-//                 }
-//                 throw new Error("API response text missing or invalid JSON.");
-
-//             } catch (error) {
-//                 console.error(`Attempt ${attempt + 1} failed:`, error);
-//                 if (attempt < retries - 1) {
-//                     const delay = Math.pow(2, attempt) * 1000;
-//                     await new Promise(res => setTimeout(res, delay));
-//                 } else {
-//                     setOrderAiLoadingId(null);
-//                     setOrderAiResult(prev => ({
-//                         ...prev,
-//                         [order.id]: {
-//                             summary: "Failed to generate AI summary: Service unavailable.",
-//                             actions: ["Check API connection.", "Manually review order details."]
-//                         }
-//                     }));
-//                     return;
-//                 }
-//             }
-//         }
-//         setOrderAiLoadingId(null);
-//     }, [orderAiLoadingId, apiKey]);
-
-//     // 5. Order Logic
-//     const handleAddToCart = (item: MenuItem) => {
-//         setCartItems(prevItems => {
-//             const existingItem = prevItems.find(cartItem => cartItem.name === item.name);
-//             if (existingItem) {
-//                 return prevItems.map(cartItem =>
-//                     cartItem.name === item.name ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem
-//                 );
-//             }
-//             return [...prevItems, { ...item, quantity: 1 }];
-//         });
-//     };
-
-//     const updateQuantity = (itemName: string, newQuantity: number) => {
-//         if (newQuantity <= 0) {
-//             setCartItems(prevItems => prevItems.filter(item => item.name !== itemName));
-//         } else {
-//             setCartItems(prevItems => prevItems.map(item =>
-//                 item.name === itemName ? { ...item, quantity: newQuantity } : item
-//             ));
-//         }
-//     };
-
-//     const calculateTotal = (): number => {
-//         return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-//     };
-
-//     const calculateTotalFormatted = () => calculateTotal().toFixed(2);
-
-
-//     const placeOrder = async (e: React.FormEvent) => {
-//         e.preventDefault();
-
-//         if (cartItems.length === 0) {
-//             setOrderStatus('validation_empty_cart');
-//             setTimeout(() => setOrderStatus(null), 3000);
-//             return;
-//         }
-//         if (!customerInfo.name || !customerInfo.phone) {
-//             setOrderStatus('validation_missing_fields');
-//             setTimeout(() => setOrderStatus(null), 3000);
-//             return;
-//         }
-        
-//         if (isPlacingOrder) return; 
-
-//         // CRITICAL: Check if DB is available
-//         const isConfigured = Object.keys(firebaseConfig).length > 0 && firebaseConfig.projectId;
-        
-//         if (!isAppReady || !db || !userId || !appId || !isConfigured) {
-//             console.error("CRITICAL: Order attempted, but Firestore DB is not initialized or configured.");
-//             setOrderStatus('config_missing_db');
-//             setIsPlacingOrder(false);
-//             setTimeout(() => setOrderStatus(null), 7000);
-//             return;
-//         }
-
-//         // Start loading and disable button
-//         setIsPlacingOrder(true);
-//         setOrderStatus(null);
-
-//         try {
-//             // Path: /artifacts/{appId}/public/data/orders (Public data for the dashboard)
-//             const ordersPath = `artifacts/${appId}/public/data/orders`;
-
-//             const orderData = {
-//                 userId: userId,
-//                 customerName: customerInfo.name,
-//                 customerPhone: customerInfo.phone,
-//                 customerEmail: customerInfo.email || 'N/A',
-//                 deliveryInstructions: customerInfo.instructions || 'None',
-//                 items: cartItems.map(item => ({
-//                     name: item.name,
-//                     quantity: item.quantity,
-//                     price: item.price,
-//                     subtotal: item.price * item.quantity
-//                 })),
-//                 totalAmount: calculateTotal(),
-//                 status: 'Pending Payment/Unpaid', // This is the default "Working On" status
-//                 payment: { method: 'Cash/Pickup (Unpaid)', transactionId: 'N/A' },
-//                 timestamp: serverTimestamp(),
-//             };
-
-//             await addDoc(collection(db, ordersPath), orderData);
-
-//             // SUCCESS HANDLERS
-//             setCartItems([]);
-//             setCustomerInfo({ name: '', email: '', phone: '', instructions: '' });
-//             setOrderStatus('success');
-//             setActiveSection('menu'); 
-            
-//         } catch (error) {
-//             // This catches the 400 Bad Request error due to Security Rules.
-//             console.error("Error placing order (check create permissions):", error);
-//             setOrderStatus('db_permission_error_write');
-            
-//         } finally {
-//             // CRITICAL FIX: Ensure loading state is ALWAYS reset on completion (success or error)
-//             setIsPlacingOrder(false); 
-//             setTimeout(() => setOrderStatus(null), 5000);
-//         }
-//     };
-
-//     // Helper to render order status box
-//     const OrderStatusMessage = ({ status }: { status: string | null }) => {
-//         if (!status) return null;
-
-//         let color, text, Icon;
-
-//         switch (status) {
-//             case 'success':
-//                 color = 'bg-green-500';
-//                 text = 'Order placed successfully! Pending payment at pickup/delivery.';
-//                 Icon = CheckCheck;
-//                 break;
-//             case 'db_permission_error_write':
-//                 color = 'bg-red-500';
-//                 text = 'Operation Failed: Security Rules denied the WRITE/UPDATE operation. (HINT: Check Firestore rules to allow "update" and "delete".)';
-//                 Icon = XCircle;
-//                 break;
-//             case 'db_permission_error_read':
-//                 color = 'bg-red-500';
-//                 text = 'Dashboard Failed: Security Rules denied the READ operation. (HINT: Check your Firestore Security Rules.)';
-//                 Icon = XCircle;
-//                 break;
-//             case 'config_missing_db': // Updated explicit status
-//                 color = 'bg-red-600';
-//                 text = 'Order Failed: Firestore config is missing. Please replace the placeholder values in the firebaseConfig object to enable the database.';
-//                 Icon = AlertTriangle;
-//                 break;
-//             case 'validation_missing_fields':
-//                 color = 'bg-yellow-500';
-//                 text = '⚠️ Please fill in your Full Name and Phone Number to proceed with checkout.';
-//                 Icon = ListOrdered;
-//                 break;
-//             case 'validation_empty_cart':
-//                 color = 'bg-yellow-500';
-//                 text = '⚠️ Your cart is empty. Please add items before checking out.';
-//                 Icon = ShoppingCart;
-//                 break;
-//             default:
-//                 return null;
-//         }
-
-//         return (
-//             <div className={`fixed top-4 right-4 z-50 p-4 rounded-xl text-white font-semibold flex items-center shadow-2xl max-w-sm ${color}`}>
-//                 <Icon className="w-6 h-6 mr-3 flex-shrink-0" />
-//                 <span className="text-sm">{text}</span>
-//             </div>
-//         );
-//     };
-
-//     // --- NEW: Dashboard Navigation Click Handler ---
-//     const handleDashboardClick = () => {
-//         if (isOwnerAuthenticated) {
-//             setActiveSection('dashboard');
-//         } else {
-//             // Only show the sign-in modal if Firebase Auth is initialized
-//             if (auth) {
-//                 setShowSignInModal(true);
-//             } else {
-//                 setOrderStatus('config_missing_db'); // Re-use status for config error
-//                 setTimeout(() => setOrderStatus(null), 7000);
-//             }
-//         }
-//     };
-
-//     // --- Reusable Navigation Button Component ---
-//     const NavButton = ({ sectionName, label, IconComponent, count, isOwner = false }: { sectionName: string, label: string, IconComponent: React.ElementType, count?: number, isOwner?: boolean }) => {
-//         const baseBg = isOwner ? 'bg-gray-800' : 'bg-purple-600';
-//         const baseHover = isOwner ? 'hover:bg-gray-900' : 'hover:bg-purple-700';
-//         const ringColor = isOwner ? 'ring-gray-400' : 'ring-purple-400';
-
-//         const activeClasses = activeSection === sectionName
-//             ? `shadow-2xl ring-4 ${ringColor} scale-105 ring-offset-4 ring-offset-gray-100`
-//             : `${baseHover} shadow-lg`;
-
-//         const displayLabel = count !== undefined ? `${label} (${count})` : label;
-
-//         // NEW: Dashboard button uses the special handler
-//         const onClickHandler = isOwner 
-//             ? handleDashboardClick 
-//             : () => setActiveSection(sectionName);
-
-//         return (
-//             <button
-//                 onClick={onClickHandler}
-//                 className={`
-//                     w-24 h-24 md:w-28 md:h-28 rounded-full flex flex-col items-center justify-center
-//                     font-semibold text-white text-xs md:text-sm font-sans
-//                     transition duration-300 transform flex-shrink-0
-//                     ${baseBg} ${activeClasses}
-//                 `}
-//             >
-//                 <IconComponent className="mb-1" size={24} />
-//                 <span className="text-center">{displayLabel}</span>
-//             </button>
-//         );
-//     };
-
-//     // --- Reusable Mobile Navigation Button Component (Bottom Bar) ---
-//     const MobileNavButton = ({ sectionName, IconComponent, count = 0, label }: { sectionName: string, IconComponent: React.ElementType, count?: number, label: string }) => {
-//         const isActive = activeSection === sectionName;
-//         const colorClass = isActive ? 'text-purple-600' : 'text-gray-500 hover:text-purple-600';
-
-//         const isOwner = sectionName === 'dashboard';
-//         const activeBar = isOwner 
-//             ? 'border-gray-800' 
-//             : 'border-purple-600';
-        
-//         // NEW: Dashboard button uses the special handler
-//         const onClickHandler = isOwner 
-//             ? handleDashboardClick 
-//             : () => setActiveSection(sectionName);
-
-//         return (
-//             <button
-//                 onClick={onClickHandler}
-//                 className={`flex flex-col items-center p-2 transition-colors duration-200 relative ${colorClass} w-full`}
-//             >
-//                 {isActive && <div className={`absolute top-0 w-8 h-1 rounded-b-full ${activeBar}`}></div>}
-//                 <IconComponent className="w-6 h-6" />
-//                 {count > 0 && sectionName === 'cart' && ( 
-//                     <span className="absolute top-1 right-3 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
-//                         {count}
-//                     </span>
-//                 )}
-//                 <span className="text-[10px] mt-1 font-semibold">{label}</span>
-//             </button>
-//         );
-//     };
-
-
-//     // --- RENDERING SECTIONS ---
-    
-//     // Home Section Renderer
-//     const renderHome = () => (
-//         <div className="text-center py-16 px-4 bg-purple-50 rounded-2xl shadow-xl">
-//             <ChefHat className="w-16 h-16 mx-auto mb-4 text-purple-600" />
-//             <h2 className="text-6xl font-extrabold text-gray-900 font-serif mb-4">
-//                 The Saffron Table
-//             </h2>
-//             <p className="text-xl text-gray-600 mb-8 max-w-lg mx-auto">
-//                 Experience the rich flavors and aromatic traditions of authentic Persian cuisine. Order your feast now!
-//             </p>
-//             <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
-//                 <button
-//                     onClick={() => setActiveSection('menu')}
-//                     className="bg-purple-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-purple-700 transition transform hover:scale-105"
-//                 >
-//                     View Full Menu
-//                 </button>
-//                 {/* MODIFIED: Button now calls the authentication handler */}
-//                 <button
-//                     onClick={handleDashboardClick}
-//                     className="bg-gray-800 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-gray-900 transition transform hover:scale-105 flex items-center justify-center"
-//                 >
-//                     <ChefHat className="w-5 h-5 mr-2" /> Owner Dashboard
-//                 </button>
-//             </div>
-
-//             <div className="mt-12 pt-8 border-t border-purple-200">
-//                 <h3 className="text-2xl font-bold text-gray-800 mb-4">Contact Us</h3>
-//                 <div className="flex justify-center flex-wrap gap-6 text-gray-600">
-//                     <p className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-purple-600" /> 123 Saffron Lane, Tehrangeles, CA</p>
-//                     <p className="flex items-center"><Phone className="w-4 h-4 mr-2 text-purple-600" /> (555) 555-SAFR</p>
-//                     <p className="flex items-center"><Mail className="w-4 h-4 mr-2 text-purple-600" /> orders@saffrontable.com</p>
-//                 </div>
-//             </div>
-//         </div>
-//     );
-
-//     // Menu Section Renderer
-//     const renderMenu = () => (
-//         <div className="space-y-12">
-//             <h2 className="text-4xl font-extrabold text-gray-900 font-sans flex items-center">
-//                 <Utensils className="w-8 h-8 mr-3 text-purple-600" />
-//                 The Persian Feast Menu
-//             </h2>
-//             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-//                 {menuItems.map((item) => (
-//                     <div key={item.name} className="bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition duration-300 flex flex-col">
-//                         <img
-//                             src={item.image}
-//                             alt={item.name}
-//                             className="w-full h-48 object-cover object-center"
-//                             onError={(e) => {
-//                                 e.currentTarget.onerror = null;
-//                                 e.currentTarget.src = `https://placehold.co/400x192/E5E7EB/4B5563?text=${item.name.slice(0, 8)}...`;
-//                             }}
-//                         />
-//                         <div className="p-6 flex flex-col flex-grow">
-//                             <div className="flex justify-between items-start mb-2">
-//                                 <h3 className="text-2xl font-bold text-gray-900 font-serif">{item.name}</h3>
-//                                 <span className="text-xl font-extrabold text-purple-600">${item.price.toFixed(2)}</span>
-//                             </div>
-//                             <p className="text-gray-600 text-sm mb-4 flex-grow">{item.description}</p>
-
-//                             {/* AI Buttons */}
-//                             <div className="flex space-x-2 mb-4">
-//                                 <button
-//                                     onClick={() => generateDescription(item)}
-//                                     disabled={aiLoading}
-//                                     className="flex-1 text-xs px-3 py-1 bg-purple-100 text-purple-700 font-semibold rounded-full hover:bg-purple-200 transition disabled:bg-gray-200 disabled:text-gray-600 flex items-center justify-center"
-//                                 >
-//                                     {aiLoading && aiResult?.dishName === item.name && aiResult?.type === 'description' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <BookOpen className="w-4 h-4 mr-1" />}
-//                                     {!aiLoading || aiResult?.dishName !== item.name || aiResult?.type !== 'description' ? 'Poetic Description' : 'Loading...'}
-//                                 </button>
-//                                 <button
-//                                     onClick={() => generatePairing(item)}
-//                                     disabled={aiLoading}
-//                                     className="flex-1 text-xs px-3 py-1 bg-purple-100 text-purple-700 font-semibold rounded-full hover:bg-purple-200 transition disabled:bg-gray-200 disabled:text-gray-600 flex items-center justify-center"
-//                                 >
-//                                     {aiLoading && aiResult?.dishName === item.name && aiResult?.type === 'pairing' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <ChefHat className="w-4 h-4 mr-1" />}
-//                                     {!aiLoading || aiResult?.dishName !== item.name || aiResult?.type !== 'pairing' ? 'Pairing Suggestion' : 'Loading...'}
-//                                 </button>
-//                             </div>
-                            
-//                             {/* AI Result Display */}
-//                             {aiResult && aiResult.dishName === item.name && (
-//                                 <div className={`p-3 mt-2 rounded-lg text-sm ${aiResult.type === 'error' ? 'bg-red-100 text-red-800 border-l-4 border-red-500' : 'bg-green-50 text-green-800 border-l-4 border-green-500'}`}>
-//                                     {aiResult.type === 'error' && <AlertTriangle className="w-4 h-4 mr-2 inline" />}
-//                                     <div dangerouslySetInnerHTML={{ __html: aiResult.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
-//                                 </div>
-//                             )}
-
-//                             {/* Add to Cart Button */}
-//                             <button
-//                                 onClick={() => handleAddToCart(item)}
-//                                 className="mt-4 w-full bg-purple-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-purple-700 transition transform hover:scale-[1.01] flex items-center justify-center"
-//                             >
-//                                 <ShoppingCart className="w-5 h-5 mr-2" />
-//                                 Add to Cart
-//                             </button>
-//                         </div>
-//                     </div>
-//                 ))}
-//             </div>
-//         </div>
-//     );
-
-//     // Cart Section Renderer
-//     const renderCart = () => (
-//         <div className="space-y-8 max-w-4xl mx-auto">
-//             <h2 className="text-4xl font-extrabold text-gray-900 font-sans flex items-center">
-//                 <ShoppingCart className="w-8 h-8 mr-3 text-purple-600" />
-//                 Your Order Basket
-//             </h2>
-
-//             {cartItems.length === 0 ? (
-//                 <div className="text-center p-12 bg-gray-50 rounded-2xl shadow-inner">
-//                     <p className="text-xl text-gray-500 font-semibold">Your cart is currently empty. <span className="block text-sm font-normal pt-2">Head to the menu to start your Persian feast!</span></p>
-//                     <button
-//                         onClick={() => setActiveSection('menu')}
-//                         className="mt-6 bg-purple-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:bg-purple-700 transition"
-//                     >
-//                         View Menu
-//                     </button>
-//                 </div>
-//             ) : (
-//                 <div className="space-y-6">
-//                     <div className="bg-white rounded-2xl shadow-xl divide-y divide-purple-100 p-4">
-//                         {cartItems.map(item => (
-//                             <div key={item.name} className="flex items-center justify-between py-4">
-//                                 <div className="flex items-center space-x-4">
-//                                     <img
-//                                         src={item.image}
-//                                         alt={item.name}
-//                                         className="w-16 h-16 rounded-lg object-cover"
-//                                         onError={(e) => {
-//                                             e.currentTarget.onerror = null;
-//                                             e.currentTarget.src = `https://placehold.co/64x64/E5E7EB/4B5563?text=Dish`;
-//                                         }}
-//                                     />
-//                                     <div>
-//                                         <p className="font-semibold text-lg text-gray-900">{item.name}</p>
-//                                         <p className="text-sm text-gray-500">${item.price.toFixed(2)} each</p>
-//                                     </div>
-//                                 </div>
-                                
-//                                 <div className="flex items-center space-x-4">
-//                                     <div className="flex items-center border border-purple-300 rounded-full">
-//                                         <button
-//                                             onClick={() => updateQuantity(item.name, item.quantity - 1)}
-//                                             className="p-2 text-purple-600 hover:bg-purple-50 rounded-l-full transition"
-//                                         >
-//                                             <Minus className="w-4 h-4" />
-//                                         </button>
-//                                         <span className="px-3 font-semibold text-gray-800">{item.quantity}</span>
-//                                         <button
-//                                             onClick={() => updateQuantity(item.name, item.quantity + 1)}
-//                                             className="p-2 text-purple-600 hover:bg-purple-50 rounded-r-full transition"
-//                                         >
-//                                             <Plus className="w-4 h-4" />
-//                                         </button>
-//                                     </div>
-//                                     <button
-//                                         onClick={() => updateQuantity(item.name, 0)}
-//                                         className="p-2 text-red-500 hover:bg-red-50 rounded-full transition"
-//                                     >
-//                                         <XCircle className="w-5 h-5" />
-//                                     </button>
-//                                 </div>
-//                             </div>
-//                         ))}
-//                     </div>
-
-//                     <div className="bg-purple-50 p-6 rounded-2xl shadow-inner flex justify-between items-center">
-//                         <p className="text-xl font-bold text-gray-800">Order Subtotal:</p>
-//                         <p className="text-3xl font-extrabold text-purple-700">${calculateTotalFormatted()}</p>
-//                     </div>
-
-//                     <button
-//                         onClick={() => setActiveSection('checkout')}
-//                         className="w-full bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-green-600 transition transform hover:scale-[1.01] flex items-center justify-center text-xl"
-//                     >
-//                         <CreditCard className="w-6 h-6 mr-2" />
-//                         Proceed to Checkout
-//                     </button>
-//                 </div>
-//             )}
-//         </div>
-//     );
-
-//     // Checkout Section Renderer
-//     const renderCheckout = () => (
-//         <div className="space-y-8 max-w-xl mx-auto">
-//             <h2 className="text-4xl font-extrabold text-gray-900 font-sans flex items-center">
-//                 <ListOrdered className="w-8 h-8 mr-3 text-purple-600" />
-//                 Delivery & Payment
-//             </h2>
-
-//             <div className="bg-white p-8 rounded-2xl shadow-xl">
-//                 <form onSubmit={placeOrder} className="space-y-6">
-//                     <div className="bg-purple-50 p-4 rounded-xl border border-purple-200">
-//                         <p className="text-lg font-bold text-purple-800 mb-2">Order Summary</p>
-//                         <div className="flex justify-between text-gray-700 text-sm">
-//                             <span>{cartItems.length} items</span>
-//                             <span className="text-xl font-extrabold text-purple-700">${calculateTotalFormatted()}</span>
-//                         </div>
-//                     </div>
-
-//                     <h3 className="text-xl font-bold text-gray-800 pt-2 border-t border-gray-100">Contact & Delivery</h3>
-
-//                     <div className="space-y-4">
-//                         <input
-//                             type="text"
-//                             placeholder="* Full Name"
-//                             value={customerInfo.name}
-//                             onChange={(e) => setCustomerInfo(p => ({ ...p, name: e.target.value }))}
-//                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
-//                             required
-//                         />
-//                         <input
-//                             type="tel"
-//                             placeholder="* Phone Number (e.g., 555-123-4567)"
-//                             value={customerInfo.phone}
-//                             onChange={(e) => setCustomerInfo(p => ({ ...p, phone: e.target.value }))}
-//                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
-//                             required
-//                         />
-//                         <input
-//                             type="email"
-//                             placeholder="Email (Optional)"
-//                             value={customerInfo.email}
-//                             onChange={(e) => setCustomerInfo(p => ({ ...p, email: e.target.value }))}
-//                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
-//                         />
-//                         <textarea
-//                             placeholder="Delivery Instructions (e.g., House number, street name, no nuts please)"
-//                             value={customerInfo.instructions}
-//                             onChange={(e) => setCustomerInfo(p => ({ ...p, instructions: e.target.value }))}
-//                             rows={3}
-//                             className="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
-//                         />
-//                     </div>
-
-//                     <div className="p-4 bg-yellow-100 rounded-xl flex items-start space-x-3">
-//                         <DollarSign className="w-5 h-5 text-yellow-700 mt-1 flex-shrink-0" />
-//                         <p className="text-sm text-yellow-800 font-semibold">
-//                             Payment Method: Cash or Card upon Pickup/Delivery. <br/>
-//                             <span className="font-normal italic">Your order will be placed in the system as "Pending Payment."</span>
-//                         </p>
-//                     </div>
-
-//                     <button
-//                         type="submit"
-//                         disabled={isPlacingOrder || cartItems.length === 0}
-//                         className="w-full bg-purple-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-purple-700 transition transform hover:scale-[1.01] disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center text-xl"
-//                     >
-//                         {isPlacingOrder ? (
-//                             <><Loader2 className="animate-spin mr-2 w-6 h-6" /> Placing Order...</>
-//                         ) : (
-//                             <><CheckCheck className="w-6 h-6 mr-2" /> Confirm & Place Order</>
-//                         )}
-//                     </button>
-//                 </form>
-//             </div>
-
-//             <button
-//                 onClick={() => setActiveSection('cart')}
-//                 className="w-full text-sm text-gray-500 hover:text-purple-600 transition font-medium flex items-center justify-center pt-2"
-//             >
-//                 &larr; Back to Cart
-//             </button>
-//         </div>
-//     );
-
-//     // ====================================================================================
-//     // --- MODIFIED: Dashboard Section Renderer ---
-//     // ====================================================================================
-//     const renderDashboard = () => {
-//         // GUARD CLAUSE: If not authenticated, show a blocked message
-//         if (!isOwnerAuthenticated) {
-//             return (
-//                 <div className="text-center py-20 px-4 bg-red-50 rounded-2xl shadow-xl border-t-4 border-red-400">
-//                     <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-red-600" />
-//                     <h2 className="text-3xl font-extrabold text-gray-900 font-sans mb-4">
-//                         Access Restricted
-//                     </h2>
-//                     <p className="text-xl text-gray-600 mb-8 max-w-lg mx-auto">
-//                         This area is for the owner only. Please sign in to view the Kitchen Dashboard.
-//                     </p>
-//                     <button
-//                         onClick={handleDashboardClick}
-//                         className="bg-red-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-red-700 transition transform hover:scale-105 flex items-center justify-center mx-auto"
-//                     >
-//                         <KeyRound className="w-5 h-5 mr-2" /> Owner Sign In
-//                     </button>
-//                 </div>
-//             );
-//         }
-        
-//         // Authenticated Content
-//         const workingOnOrders = orders.filter(o => o.status === 'Pending Payment/Unpaid');
-//         const doneOrders = orders.filter(o => o.status === 'Done');
-
-//         return (
-//             <div className="space-y-8">
-//                 {/* This is your original header and info box, unchanged */}
-//                 <h2 className="text-4xl font-extrabold text-gray-900 font-sans flex items-center">
-//                     <ChefHat className="w-8 h-8 mr-3 text-gray-800" />
-//                     Kitchen Order Dashboard ({orders.length} Total)
-//                 </h2>
-//                 <div className="p-4 bg-gray-100 rounded-xl shadow-inner">
-//                     <p className="text-sm font-semibold text-gray-700 mb-2">System Info:</p>
-//                     <div className="flex flex-wrap text-xs text-gray-600 font-mono space-x-4">
-//                         <span>App ID: <span className="font-bold text-gray-800">{appId}</span></span>
-//                         <span>User ID (Owner): <span className="font-bold text-gray-800">{userId?.substring(0, 8) || 'N/A'}...</span></span>
-//                     </div>
-//                     <p className="text-xs text-gray-500 mt-2">This is the new real-time kitchen workflow. New orders appear in "Working On".</p>
-//                     <p className="text-sm text-red-600 mt-3 font-semibold">
-//                         ⚠️ If no orders appear, ensure your Firestore Security Rules allow `read` access to `artifacts/{appId}/public/data/orders`.
-//                     </p>
-//                 </div>
-
-//                 {/* --- NEW: Two-Column Workflow Layout --- */}
-//                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-7xl mx-auto">
-//                     {/* --- Working On Column --- */}
-//                     <div className="bg-white p-5 rounded-xl shadow-2xl">
-//                         <h2 className="text-2xl font-bold text-amber-700 border-b-4 border-amber-500 pb-2 mb-4 flex items-center">
-//                             <Loader2 className="w-5 h-5 mr-2" />
-//                             Working On ({workingOnOrders.length})
-//                         </h2>
-//                         <div className="space-y-4">
-//                             {workingOnOrders.length === 0 ? (
-//                                 <p className="text-gray-500 p-4 bg-amber-50 rounded-lg italic">
-//                                     No new orders to prepare.
-//                                 </p>
-//                             ) : (
-//                                 workingOnOrders.map(order => (
-//                                     <KitchenOrderTicket 
-//                                         key={order.id} 
-//                                         order={order} 
-//                                         db={db} // <-- Passed as prop
-//                                         appId={appId} // <-- Passed as prop
-//                                         setOrderStatus={setOrderStatus} // <-- Passed as prop
-//                                     />
-//                                 ))
-//                             )}
-//                         </div>
-//                     </div>
-
-//                     {/* --- DONE Column --- */}
-//                     <div className="bg-white p-5 rounded-xl shadow-2xl">
-//                         <h2 className="text-2xl font-bold text-green-700 border-b-4 border-green-500 pb-2 mb-4 flex items-center">
-//                             <CheckCheck className="w-5 h-5 mr-2 text-green-500" />
-//                             DONE (Ready for Pickup) ({doneOrders.length})
-//                         </h2>
-//                         <div className="space-y-4">
-//                             {doneOrders.length === 0 ? (
-//                                 <p className="text-gray-500 p-4 bg-green-50 rounded-lg italic">
-//                                     Completed orders will appear here.
-//                                 </p>
-//                             ) : (
-//                                 doneOrders.map(order => (
-//                                     <KitchenOrderTicket 
-//                                         key={order.id} 
-//                                         order={order} 
-//                                         db={db} // <-- Passed as prop
-//                                         appId={appId} // <-- Passed as prop
-//                                         setOrderStatus={setOrderStatus} // <-- Passed as prop
-//                                     />
-//                                 ))
-//                             )}
-//                         </div>
-//                     </div>
-//                 </div>
-//             </div>
-//         );
-//     };
-
-//     const renderContent = () => {
-//         switch (activeSection) {
-//             case 'home':
-//                 return renderHome();
-//             case 'menu':
-//                 return renderMenu();
-//             case 'cart':
-//                 return renderCart();
-//             case 'checkout':
-//                 return renderCheckout();
-//             case 'dashboard':
-//                 // Even if authenticated, the initial tab click is handled by handleDashboardClick 
-//                 // which sets the state and calls renderDashboard, which then checks auth again.
-//                 return renderDashboard();
-//             default:
-//                 return renderHome();
-//         }
-//     };
-    
-//     // Main component return structure
-//     return (
-//         <div className="min-h-screen bg-gray-100 font-sans flex flex-col">
-//             <OrderStatusMessage status={orderStatus} />
-            
-//             {/* NEW: Owner Sign-In Modal */}
-//             {auth && ( // Only render if Firebase Auth is initialized
-//                 <OwnerSignInModal 
-//                     auth={auth}
-//                     isOpen={showSignInModal}
-//                     onClose={() => setShowSignInModal(false)}
-//                     onSuccess={() => {
-//                         setShowSignInModal(false);
-//                         setActiveSection('dashboard'); // Navigate after successful sign-in
-//                         // isOwnerAuthenticated will be set to true by the onAuthStateChanged listener
-//                     }}
-//                 />
-//             )}
-
-//             {/* Desktop Sidebar Navigation (Hidden on Mobile) */}
-//             <div className="hidden md:flex bg-white shadow-xl p-6 border-r border-gray-200 fixed top-0 left-0 h-full flex-col space-y-6 z-10 w-[140px] lg:w-[180px]">
-//                 <div className="text-center py-4">
-//                     <h1 className="text-3xl font-extrabold text-purple-700 font-serif">Saffron</h1>
-//                     <h2 className="text-sm text-gray-500">The Table</h2>
-//                 </div>
-                
-//                 <div className="flex flex-col space-y-6 flex-grow">
-//                     <NavButton sectionName="home" label="Home" IconComponent={Home} />
-//                     <NavButton sectionName="menu" label="Menu" IconComponent={BookOpen} />
-//                     <NavButton sectionName="cart" label="Cart" IconComponent={ShoppingCart} count={cartItems.length} />
-//                     {cartItems.length > 0 && (
-//                         <NavButton sectionName="checkout" label="Checkout" IconComponent={DollarSign} />
-//                     )}
-//                 </div>
-
-//                 {/* Owner Dashboard - Styled Differently */}
-//                 <div className="pt-6 border-t border-gray-200">
-//                     {/* MODIFIED: NavButton handles the authentication logic internally now */}
-//                     <NavButton 
-//                         sectionName="dashboard" 
-//                         label={isOwnerAuthenticated ? "Dashboard" : "Owner Login"} 
-//                         IconComponent={isOwnerAuthenticated ? ChefHat : KeyRound} 
-//                         count={isOwnerAuthenticated ? orders.length : undefined} 
-//                         isOwner={true} 
-//                     />
-//                 </div>
-//             </div>
-
-//             {/* Main Content Area */}
-//             <main className="flex-grow p-4 md:p-8 md:ml-[140px] lg:ml-[180px] mt-16 md:mt-0">
-//                 {isAppReady ? (
-//                     <div className="container mx-auto max-w-7xl pt-4 pb-20 md:pb-0">
-//                         {renderContent()}
-//                     </div>
-//                 ) : (
-//                     <div className="flex items-center justify-center h-full min-h-[50vh] text-purple-600 text-xl font-semibold">
-//                         <Loader2 className="animate-spin mr-3" size={32} /> Loading Application...
-//                     </div>
-//                 )}
-//             </main>
-
-//             {/* Mobile Bottom Navigation (Hidden on Desktop) */}
-//             <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-20">
-//                 <div className="flex justify-around items-center h-16">
-//                     <MobileNavButton sectionName="home" label="Home" IconComponent={Home} />
-//                     <MobileNavButton sectionName="menu" label="Menu" IconComponent={BookOpen} />
-//                     <MobileNavButton sectionName="cart" label="Cart" IconComponent={ShoppingCart} count={cartItems.length} />
-//                     {/* MODIFIED: MobileNavButton handles the authentication logic internally now */}
-//                     <MobileNavButton 
-//                         sectionName="dashboard" 
-//                         label={isOwnerAuthenticated ? "Dashboard" : "Owner"} 
-//                         IconComponent={isOwnerAuthenticated ? ChefHat : KeyRound} 
-//                     />
-//                 </div>
-//             </div>
-//         </div>
-//     );
-// }
-
-
-
-
-
-
-
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChefHat, Utensils, Home, BookOpen, ShoppingCart, Plus, Minus, XCircle, DollarSign, ListOrdered, Loader2, CheckCheck, CreditCard, MapPin, Phone, Mail, AlertTriangle, RefreshCw, Trash2, LogOut } from 'lucide-react'; // <-- ADDED LogOut
-
-// --- FIREBASE IMPORTS & SETUP ---
+// --- FIREBASE IMPORTS ---
 import { initializeApp } from 'firebase/app';
 import { 
     getAuth, 
@@ -2494,7 +9,7 @@ import {
     onAuthStateChanged, 
     signInWithCustomToken, 
     signInWithEmailAndPassword, 
-    signOut // <-- ADDED signOut
+    signOut
 } from 'firebase/auth'; 
 import {
     getFirestore,
@@ -2503,45 +18,47 @@ import {
     query,
     onSnapshot,
     serverTimestamp,
-    setLogLevel,
     doc, 
     updateDoc, 
-    deleteDoc 
+    deleteDoc,
+    setDoc
 } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+
+// --- REAL STRIPE IMPORTS ---
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
 // ====================================================================================
-// CRITICAL: FIREBASE CONFIGURATION (DO NOT MODIFY GLOBAL VARIABLE CHECK)
+// 1. CONFIGURATION
 // ====================================================================================
 
-// Retrieve globals from Canvas environment or default to empty/null if running locally.
+// ⚠️ REPLACE THIS WITH YOUR REAL PUBLISHABLE KEY
+const STRIPE_PUBLISHABLE_KEY = "pk_test_51SNRYLRtvj10xKSpPaS4rxSGuMhRatLcd9YqAuo9gH17SytoIqUh7hx0TjXIo962YrwVTAP1M29isVZAT6gOTaoF00zl0eoDxp"; 
+const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
+
 const canvasFirebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
 const canvasInitialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-// If running locally, you must provide your config here:
 const firebaseConfig = Object.keys(canvasFirebaseConfig).length > 0
     ? canvasFirebaseConfig
     : {
-          // 🚀 FIX: Placeholder values to ensure initialization. REPLACE THESE if running outside Canvas.
-          // Your current config: saffron-41b76
           apiKey: "AIzaSyCZjRhhYlse6zb6e0z729vXEFyIifKOEgM",
           authDomain: "saffron-41b76.firebaseapp.com",
-          projectId: "saffron-41b76", // THIS IS CRITICAL FOR FIRESTORE
+          projectId: "saffron-41b76", 
           storageBucket: "saffron-41b76.appspot.com",
           messagingSenderId: "1234567890",
           appId: "1:1234567890:web:abcdef1234567890",
       };
 
 const initialAuthToken = canvasInitialAuthToken;
-setLogLevel('debug'); // Enable Firestore logging
-
-// --- Gemini API Constants ---
-const apiKey = ""; // Leave as empty string for Canvas execution or replace with your key
+const apiKey = ""; 
 const LLM_MODEL = "gemini-2.5-flash-preview-05-20";
 
-// --- TYPE DEFINITIONS for TypeScript Safety ---
-
+// --- TYPE DEFINITIONS ---
 interface MenuItem {
+    id?: string; 
     name: string;
     description: string;
     price: number;
@@ -2573,9 +90,17 @@ interface Order {
     deliveryInstructions: string;
     items: OrderItem[];
     totalAmount: number;
-    status: string; // This will be 'Pending Payment/Unpaid' or 'Done'
-    payment: { method: string; transactionId: string };
+    status: string; 
+    payment: { 
+        method: string; 
+        transactionId: string;
+        brand?: string;
+        last4?: string;
+        expMonth?: number | null;
+        expYear?: number | null;
+    };
     timestamp: FirestoreTimestamp | null;
+    archivedAt?: FirestoreTimestamp | number | Date | null; 
 }
 
 type AiResult = {
@@ -2584,13 +109,7 @@ type AiResult = {
     text: string;
 } | null;
 
-interface OrderAiResult {
-    summary: string;
-    actions: string[];
-}
-
-// Mock Menu Data (Typed)
-const menuItems: MenuItem[] = [
+const DEFAULT_MENU_ITEMS: MenuItem[] = [
     { name: 'Kabab Koobideh', description: 'Two skewers of seasoned ground meat, grilled to perfection, served with saffron rice.', price: 20.00, image: 'https://placehold.co/192x192/4F46E5/FFFFFF?text=Kabab' },
     { name: 'Ghormeh Sabzi', description: 'A rich and savory herb stew with kidney beans, dried lime, and lamb shank.', price: 18.50, image: 'https://placehold.co/192x192/8B5CF6/FFFFFF?text=Sabzi' },
     { name: 'Fesenjan', description: 'A delightful, slightly sweet and sour stew of chicken, ground walnuts, and pomegranate paste.', price: 22.00, image: 'https://placehold.co/192x192/6D28D9/FFFFFF?text=Fesenjan' },
@@ -2599,852 +118,776 @@ const menuItems: MenuItem[] = [
     { name: 'Zereshk Polo', description: 'Steamed rice with bright red barberries and saffron, traditionally served with roasted chicken.', price: 19.00, image: 'https://placehold.co/192x192/4F46E5/FFFFFF?text=Polo' },
 ];
 
+// ====================================================================================
+// 2. ERROR BOUNDARY
+// ====================================================================================
+class StripeErrorBoundary extends React.Component<{ children: React.ReactNode, onError: (msg: string) => void }, { hasError: boolean }> {
+    constructor(props: any) {
+        super(props);
+        this.state = { hasError: false };
+    }
+
+    static getDerivedStateFromError(error: any) {
+        return { hasError: true };
+    }
+
+    componentDidCatch(error: any) {
+        console.error("Stripe Critical Error:", error);
+        this.props.onError("Payment System Error. Please refresh.");
+    }
+
+    render() {
+        if (this.state.hasError) {
+            return (
+                <div className="p-8 text-center bg-white rounded-xl border border-red-100 shadow-sm">
+                    <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-3" />
+                    <p className="text-gray-800 font-bold">Payment Interface Error</p>
+                    <p className="text-gray-500 text-sm mt-1 mb-4">We encountered an issue loading the secure payment form.</p>
+                    <button onClick={() => window.location.reload()} className="text-sm bg-gray-100 px-4 py-2 rounded font-bold text-gray-700 hover:bg-gray-200">Refresh Page</button>
+                </div>
+            );
+        }
+        return this.props.children;
+    }
+}
+
+// ====================================================================================
+// 3. ISOLATED STRIPE COMPONENTS
+// ====================================================================================
+
+const CheckoutForm = ({ 
+    cartItems, 
+    customerInfo, 
+    setCustomerInfo, 
+    totalAmount, 
+    userId, 
+    db, 
+    appId, 
+    onSuccess,
+    onError
+}: any) => {
+    const stripe = useStripe();
+    const elements = useElements();
+    const [message, setMessage] = useState<string | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [isElementReady, setIsElementReady] = useState(false); 
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!stripe || !elements) return;
+        setIsProcessing(true);
+
+        try {
+            const { error, paymentIntent } = await stripe.confirmPayment({
+                elements,
+                confirmParams: {
+                    return_url: window.location.href, 
+                    payment_method_data: {
+                        billing_details: {
+                            name: customerInfo.name,
+                            email: customerInfo.email,
+                            phone: customerInfo.phone,
+                        }
+                    }
+                },
+                redirect: "if_required",
+            });
+
+            if (error) {
+                setMessage(error.message || "Payment failed");
+                onError(error.message || "Payment failed");
+            } else if (paymentIntent && paymentIntent.status === "succeeded") {
+                
+                // 🚀 FIXED: MANUAL API FETCH TO BYPASS SDK LIMITATIONS
+                // We use standard fetch() to hit the API directly, forcing expansion of the fields we need.
+                
+                let cardBrand = 'Card'; 
+                let cardLast4 = 'Card'; // Default safe value
+                let cardExpMonth = null;
+                let cardExpYear = null;
+
+                try {
+                    // Construct a direct URL with expansion parameters
+                    // We expand both 'payment_method' AND 'latest_charge' to be absolutely sure we find the data.
+                    const url = `https://api.stripe.com/v1/payment_intents/${paymentIntent.id}?client_secret=${paymentIntent.client_secret}&expand[]=payment_method&expand[]=latest_charge`;
+                    
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${STRIPE_PUBLISHABLE_KEY}`,
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        }
+                    });
+
+                    const data = await response.json();
+                    
+                    // Strategy 1: Check expanded payment_method
+                    if (data.payment_method && data.payment_method.card) {
+                        cardBrand = data.payment_method.card.brand;
+                        cardLast4 = data.payment_method.card.last4;
+                        cardExpMonth = data.payment_method.card.exp_month;
+                        cardExpYear = data.payment_method.card.exp_year;
+                    } 
+                    // Strategy 2: Check expanded latest_charge (Fallback)
+                    else if (data.latest_charge && data.latest_charge.payment_method_details && data.latest_charge.payment_method_details.card) {
+                        const cardDetails = data.latest_charge.payment_method_details.card;
+                        cardBrand = cardDetails.brand;
+                        cardLast4 = cardDetails.last4;
+                        cardExpMonth = cardDetails.exp_month;
+                        cardExpYear = cardDetails.exp_year;
+                    }
+
+                } catch (e) {
+                    console.error("Manual fetch extraction failed:", e);
+                }
+                
+                // Capitalize Brand Name
+                if(cardBrand && cardBrand !== 'Card') cardBrand = cardBrand.charAt(0).toUpperCase() + cardBrand.slice(1);
+
+                const ordersPath = `artifacts/${appId}/public/data/orders`;
+                const orderData = {
+                    userId: userId,
+                    customerName: customerInfo.name,
+                    customerPhone: customerInfo.phone,
+                    customerEmail: customerInfo.email || 'N/A',
+                    deliveryInstructions: customerInfo.instructions || 'None',
+                    items: cartItems.map((item: any) => ({
+                        name: item.name,
+                        quantity: item.quantity,
+                        price: item.price,
+                        subtotal: item.price * item.quantity
+                    })),
+                    totalAmount: totalAmount,
+                    status: 'Paid', 
+                    payment: { 
+                        method: 'Credit Card (Stripe)', 
+                        transactionId: paymentIntent.id,
+                        brand: cardBrand,
+                        last4: cardLast4,
+                        expMonth: cardExpMonth,
+                        expYear: cardExpYear
+                    },
+                    timestamp: serverTimestamp(),
+                };
+                
+                await addDoc(collection(db, ordersPath), orderData);
+                onSuccess('payment_success');
+            }
+        } catch (err: any) {
+            console.error(err);
+            onError("Error processing payment");
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="bg-purple-50 p-4 rounded-xl border border-purple-200">
+                <p className="text-lg font-bold text-purple-800 mb-2">Order Summary</p>
+                <div className="flex justify-between text-gray-700 text-sm">
+                    <span>{cartItems.length} items</span>
+                    <span className="text-3xl font-extrabold text-purple-700">${totalAmount.toFixed(2)}</span>
+                </div>
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 pt-2 border-t border-gray-100">Contact & Delivery</h3>
+            <div className="space-y-4">
+                <input type="text" placeholder="* Full Name" value={customerInfo.name} onChange={(e) => setCustomerInfo((p:any) => ({ ...p, name: e.target.value }))} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500" required />
+                <input type="tel" placeholder="* Phone Number" value={customerInfo.phone} onChange={(e) => setCustomerInfo((p:any) => ({ ...p, phone: e.target.value }))} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500" required />
+                <input type="email" placeholder="Email (Optional)" value={customerInfo.email} onChange={(e) => setCustomerInfo((p:any) => ({ ...p, email: e.target.value }))} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500" />
+                <textarea placeholder="Delivery Instructions" value={customerInfo.instructions} onChange={(e) => setCustomerInfo((p:any) => ({ ...p, instructions: e.target.value }))} rows={3} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 pt-2 border-t border-gray-100">Payment Details</h3>
+            <div className="bg-white p-4 rounded-xl border border-gray-200 min-h-[150px] relative">
+                {!isElementReady && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 z-10 rounded-xl">
+                        <Loader2 className="animate-spin text-gray-400 w-8 h-8" />
+                    </div>
+                )}
+                <PaymentElement onReady={() => setIsElementReady(true)} />
+            </div>
+            {message && <div className="p-3 bg-red-100 text-red-700 rounded-lg text-sm font-semibold flex items-center"><AlertTriangle className="w-4 h-4 mr-2" />{message}</div>}
+            <button type="submit" disabled={isProcessing || !stripe || !elements || !isElementReady} className="w-full bg-purple-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-purple-700 transition transform hover:scale-[1.01] disabled:bg-gray-400 flex items-center justify-center text-xl">
+                {isProcessing ? <><Loader2 className="animate-spin mr-2 w-6 h-6" /> Processing...</> : <><CheckCheck className="w-6 h-6 mr-2" /> Pay ${totalAmount.toFixed(2)}</>}
+            </button>
+        </form>
+    );
+};
+
+// 🚀 ROBUST STRIPE WRAPPER
+const StripePaymentSection = ({ 
+    clientSecret, 
+    cartItems, 
+    customerInfo, 
+    setCustomerInfo, 
+    totalAmount, 
+    userId, 
+    db, 
+    appId, 
+    onSuccess,
+    onError,
+    refreshKey // 🚀 Receive unique key to force remount
+}: any) => {
+
+    const [showLongWaitMessage, setShowLongWaitMessage] = useState(false);
+    
+    useEffect(() => {
+        let timer: any;
+        if (!clientSecret) {
+            timer = setTimeout(() => setShowLongWaitMessage(true), 3000);
+        } else {
+            setShowLongWaitMessage(false);
+        }
+        return () => clearTimeout(timer);
+    }, [clientSecret]);
+
+    if (!clientSecret) return (
+        <div className="flex flex-col items-center justify-center p-16 bg-white rounded-xl border border-gray-100">
+            <Loader2 className="animate-spin w-12 h-12 text-purple-600 mb-6" />
+            <span className="text-gray-900 font-bold text-lg">Contacting Secure Server...</span>
+            <span className="text-gray-400 text-sm mt-2">
+                {showLongWaitMessage ? "Server waking up... (Cold start may take 10s)" : "Initializing secure transaction."}
+            </span>
+        </div>
+    );
+
+    return (
+        <StripeErrorBoundary onError={onError}>
+            <Elements 
+                stripe={stripePromise} 
+                options={{ clientSecret, appearance: { theme: 'stripe' } }} 
+                // 🚀 THE FIX: Combine secret + refreshKey to force a 100% fresh instance every time
+                key={`${clientSecret}-${refreshKey}`} 
+            >
+                <CheckoutForm 
+                    cartItems={cartItems} 
+                    customerInfo={customerInfo} 
+                    setCustomerInfo={setCustomerInfo} 
+                    totalAmount={totalAmount} 
+                    userId={userId} 
+                    db={db} 
+                    appId={appId} 
+                    onSuccess={onSuccess} 
+                    onError={onError} 
+                />
+            </Elements>
+        </StripeErrorBoundary>
+    );
+};
+
+// ====================================================================================
+// 3. MAIN APP COMPONENT
+// ====================================================================================
 export default function App() {
-    // --- STATE VARIABLES (Typed) ---
     const [activeSection, setActiveSection] = useState('home');
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
-    const [db, setDb] = useState<any>(null); // Use 'any' for Firestore instance as it's complex
-    const [auth, setAuth] = useState<any>(null); // Use 'any' for Auth instance
+    const [db, setDb] = useState<any>(null); 
+    const [auth, setAuth] = useState<any>(null); 
+    const [functions, setFunctions] = useState<any>(null); 
     const [userId, setUserId] = useState<string | null>(null);
     const [isOwner, setIsOwner] = useState(false); 
     const [orders, setOrders] = useState<Order[]>([]);
-    const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+    const [historyOrders, setHistoryOrders] = useState<Order[]>([]);
     const [orderStatus, setOrderStatus] = useState<string | null>(null);
     const [isAppReady, setIsAppReady] = useState(false);
+    const [isCleaningHistory, setIsCleaningHistory] = useState(false);
+    
+    // 🚀 PAYMENT STATE
+    const [paymentIntentClientSecret, setPaymentIntentClientSecret] = useState<string | null>(null);
+    const [paymentIntentAmount, setPaymentIntentAmount] = useState<number | null>(null);
+    // 🚀 NEW: Unique ID to force hard-reset of Stripe Element on every visit
+    const [stripeRefreshKey, setStripeRefreshKey] = useState<number>(0);
+    // 🚀 NEW: Ref to prevent double-fetching / logic loops
+    const isFetchingPayment = useRef(false);
 
-    // --- AI State for Menu ---
+    const [menuItems, setMenuItems] = useState<MenuItem[]>(DEFAULT_MENU_ITEMS);
+    const [isMenuLoading, setIsMenuLoading] = useState(true);
+
+    // Dashboard State
+    const [dashboardTab, setDashboardTab] = useState<'orders' | 'menu' | 'history'>('orders');
+    const [newItem, setNewItem] = useState({ name: '', description: '', price: '', image: '' });
+    const [isAddingItem, setIsAddingItem] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Dashboard Menu Manager Local State
+    const [dashboardMenuItems, setDashboardMenuItems] = useState<MenuItem[]>([]);
+    const [deletedIds, setDeletedIds] = useState<Set<string>>(new Set());
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const hasCheckedSeed = useRef(false);
+
+    // Checkout State
+    const [customerInfo, setCustomerInfo] = useState({ name: '', email: '', phone: '', instructions: '' });
+
+    // AI State
     const [aiResult, setAiResult] = useState<AiResult>(null);
     const [aiLoading, setAiLoading] = useState(false);
 
-    // --- AI State for Orders (Record<OrderId, Result>) ---
-    const [orderAiResult, setOrderAiResult] = useState<Record<string, OrderAiResult>>({});
-    const [orderAiLoadingId, setOrderAiLoadingId] = useState<string | null>(null);
+    const calculateTotal = useCallback(() => cartItems.reduce((total, item) => total + (item.price * item.quantity), 0), [cartItems]);
 
-    const [customerInfo, setCustomerInfo] = useState({
-        name: '', email: '', phone: '', instructions: ''
-    });
-
-    // 1. Initialize Firebase and Handle Auth 
+    // 1. Initialize Firebase
     useEffect(() => {
-        let cleanup: (() => void) | undefined;
-        
         const isConfigValid = firebaseConfig && Object.keys(firebaseConfig).length > 0 && firebaseConfig.projectId;
-
         if (isConfigValid) {
             try {
                 const app = initializeApp(firebaseConfig);
-                const firestore = getFirestore(app);
-                setDb(firestore);
-
+                setDb(getFirestore(app));
+                setFunctions(getFunctions(app));
                 const firebaseAuth = getAuth(app);
                 setAuth(firebaseAuth);
 
-                const unsubscribeAuth = onAuthStateChanged(firebaseAuth, async (user) => {
+                onAuthStateChanged(firebaseAuth, async (user) => {
                     if (!user) {
-                        try {
-                            if (initialAuthToken) {
-                                await signInWithCustomToken(firebaseAuth, initialAuthToken);
-                                // If signing in with a custom token, assume it's the owner token
-                                setIsOwner(true); 
-                            } else {
-                                await signInAnonymously(firebaseAuth);
-                            }
-                        } catch (e) {
-                            console.error("Authentication failed during sign-in:", e);
-                            setUserId(crypto.randomUUID()); 
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(firebaseAuth, initialAuthToken);
+                        } else {
+                            await signInAnonymously(firebaseAuth);
                         }
-                    } else if (user && user.isAnonymous === false) {
-                        // If a non-anonymous user logs in (e.g., via Email/Password later)
-                        setIsOwner(true);
-                    }
-
-                    const currentUserId = firebaseAuth.currentUser?.uid || crypto.randomUUID();
-                    setUserId(currentUserId);
-
-                    if (firestore) {
+                    } else {
+                        setUserId(user.uid);
+                        setIsOwner(!user.isAnonymous);
                         setIsAppReady(true);
                     }
                 });
-
-                cleanup = () => unsubscribeAuth();
             } catch (error) {
-                console.error("Firebase initialization failed. Check your config object structure:", error);
-                setDb(null);
+                console.error("Firebase initialization failed:", error);
                 setUserId(crypto.randomUUID());
                 setIsAppReady(true);
             }
         } else {
-            console.warn("Firebase config is missing or invalid. Database features will be disabled.");
-            setDb(null);
             setUserId(crypto.randomUUID());
             setIsAppReady(true);
         }
-
-        return cleanup;
     }, []);
 
-    // 2. Real-time Order Tracking (Owner Dashboard)
+    // 2. Fetch Menu Data
     useEffect(() => {
-        if (db && userId && isAppReady && appId) {
-            // Public path for collaborative data: /artifacts/{appId}/public/data/orders
-            const ordersPath = `artifacts/${appId}/public/data/orders`;
-
-            const q = query(collection(db, ordersPath));
-
-            const unsubscribe = onSnapshot(q, (snapshot) => {
-                const fetchedOrders: Order[] = [];
-                snapshot.forEach((doc) => {
-                    fetchedOrders.push({ id: doc.id, ...(doc.data() as Omit<Order, 'id'>) });
-                });
-                
-                // Client-side sorting by timestamp (newest first)
-                fetchedOrders.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
-                setOrders(fetchedOrders);
-            }, (error) => {
-                console.error("Error fetching orders (check read permissions):", error);
-                if (error && error.message.includes('permission-denied')) {
-                    setOrderStatus('db_permission_error_read');
-                    setTimeout(() => setOrderStatus(null), 5000);
+        if (db && appId && userId && isAppReady) {
+            let unsubscribe: (() => void) | undefined;
+            const menuStorageKey = `saffron_menu_${appId}`;
+            
+            const loadFromLocalStorage = () => {
+                const stored = localStorage.getItem(menuStorageKey);
+                if (stored) {
+                    try {
+                        const parsed = JSON.parse(stored);
+                        setMenuItems(parsed);
+                        return true;
+                    } catch (e) {
+                        return false;
+                    }
                 }
-            });
+                return false;
+            };
 
-            return () => unsubscribe();
+            const timer = setTimeout(() => {
+                const menuPath = `artifacts/${appId}/public/data/menu`;
+                const q = query(collection(db, menuPath));
+
+                unsubscribe = onSnapshot(q, async (snapshot) => {
+                    if (snapshot.empty && !hasCheckedSeed.current) {
+                        hasCheckedSeed.current = true;
+                        if (loadFromLocalStorage()) { setIsMenuLoading(false); return; }
+
+                        try {
+                            for (const item of DEFAULT_MENU_ITEMS) { await addDoc(collection(db, menuPath), item); }
+                        } catch (e) {
+                            setMenuItems(DEFAULT_MENU_ITEMS);
+                        }
+                        setIsMenuLoading(false);
+                    } else {
+                        hasCheckedSeed.current = true;
+                        if (!snapshot.empty) {
+                            const fetchedMenu: MenuItem[] = [];
+                            snapshot.forEach((doc) => { fetchedMenu.push({ id: doc.id, ...(doc.data() as Omit<MenuItem, 'id'>) }); });
+                            setMenuItems(fetchedMenu);
+                            localStorage.setItem(menuStorageKey, JSON.stringify(fetchedMenu));
+                        }
+                        setIsMenuLoading(false);
+                    }
+                }, (error) => {
+                    if (!loadFromLocalStorage()) { setMenuItems(DEFAULT_MENU_ITEMS); }
+                    setIsMenuLoading(false);
+                });
+            }, 100);
+
+            return () => { clearTimeout(timer); if (unsubscribe) unsubscribe(); };
         }
-    }, [db, userId, isAppReady]);
+    }, [db, appId, userId, isAppReady]);
 
-    // --- Owner Authentication Logic (Email/Password) ---
+    useEffect(() => {
+        if (!hasUnsavedChanges) {
+            setDashboardMenuItems(menuItems);
+            setDeletedIds(new Set());
+        }
+    }, [menuItems, hasUnsavedChanges]);
+
+
+    // 3. Owner Dashboard Data
+    useEffect(() => {
+        if (db && userId && isAppReady && appId && isOwner) {
+            let unsubscribeOrders: (() => void) | undefined;
+            let unsubscribeHistory: (() => void) | undefined;
+            
+            const historyStorageKey = `saffron_history_${appId}`;
+            const storedHistory = localStorage.getItem(historyStorageKey);
+            if (storedHistory) { try { setHistoryOrders(JSON.parse(storedHistory)); } catch(e) {/*ignore*/} }
+
+            const timer = setTimeout(() => {
+                const qOrders = query(collection(db, `artifacts/${appId}/public/data/orders`));
+                unsubscribeOrders = onSnapshot(qOrders, (snapshot) => {
+                    const fetchedOrders: Order[] = [];
+                    snapshot.forEach((doc) => fetchedOrders.push({ id: doc.id, ...(doc.data() as Omit<Order, 'id'>) }));
+                    fetchedOrders.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                    setOrders(fetchedOrders);
+                }, () => {});
+
+                const qHistory = query(collection(db, `artifacts/${appId}/public/data/order_history`));
+                unsubscribeHistory = onSnapshot(qHistory, (snapshot) => {
+                    const fetchedHistory: Order[] = [];
+                    snapshot.forEach((doc) => fetchedHistory.push({ id: doc.id, ...(doc.data() as Omit<Order, 'id'>) }));
+                    fetchedHistory.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+                    setHistoryOrders(fetchedHistory);
+                    localStorage.setItem(historyStorageKey, JSON.stringify(fetchedHistory));
+                }, () => {});
+
+            }, 100);
+
+            return () => { clearTimeout(timer); if (unsubscribeOrders) unsubscribeOrders(); if (unsubscribeHistory) unsubscribeHistory(); };
+        }
+    }, [db, userId, isAppReady, appId, isOwner]);
+
+    // --- Actions ---
     const handleOwnerSignIn = useCallback(async (email: string, password: string): Promise<boolean> => {
-        if (!auth) {
-            setOrderStatus('config_missing_auth');
-            setTimeout(() => setOrderStatus(null), 3000);
-            return false;
-        }
-
+        if (!auth) return false;
         try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            // If sign-in succeeds, grant owner access
-            setUserId(userCredential.user.uid);
-            setIsOwner(true); // Grant owner access on successful login
+            await signInWithEmailAndPassword(auth, email, password);
             setOrderStatus('owner_login_success');
-            setTimeout(() => setOrderStatus(null), 3000);
             return true;
-        } catch (error) {
-            console.error("Owner login failed:", error);
-            return false;
+        } catch (error: any) { 
+            if (error.code === 'auth/too-many-requests') { setOrderStatus('owner_login_blocked'); } else { setOrderStatus('owner_login_failed'); }
+            return false; 
         }
     }, [auth]);
 
-    // --- NEW: Owner Sign Out Logic ---
     const handleSignOut = useCallback(async () => {
         if (!auth) return;
-
-        try {
-            // 1. Sign out the user from Firebase Auth
-            await signOut(auth);
-            
-            // 2. Reset app state related to owner access
-            setIsOwner(false);
-            
-            // 3. Navigate back to a non-owner page
-            setActiveSection('home'); 
-
-            setOrderStatus('owner_signout_success');
-            setTimeout(() => setOrderStatus(null), 3000);
-
-        } catch (error) {
-            console.error("Error signing out:", error);
-            setOrderStatus('owner_signout_failed');
-            setTimeout(() => setOrderStatus(null), 5000);
-        }
+        try { await signOut(auth); setActiveSection('home'); setOrderStatus('owner_signout_success'); } catch { setOrderStatus('owner_signout_failed'); }
     }, [auth]);
-    // ---------------------------------
 
-    // 3. GEMINI API Logic (General Text Output) ---
-    const callGeminiApi = useCallback(async (systemPrompt: string, userQuery: string, retries = 3): Promise<string> => {
+    const handleArchiveOrder = async (order: Order) => {
+        const archivedItem: Order = { ...order, archivedAt: Date.now() };
+        const newHistory = [archivedItem, ...historyOrders];
+        setHistoryOrders(newHistory);
+        setOrders(prev => prev.filter(o => o.id !== order.id)); 
+        localStorage.setItem(`saffron_history_${appId}`, JSON.stringify(newHistory));
+
+        if (!db || !appId) return;
+        try {
+            const historyRef = doc(db, `artifacts/${appId}/public/data/order_history`, order.id);
+            await setDoc(historyRef, { ...order, archivedAt: serverTimestamp() });
+            const orderRef = doc(db, `artifacts/${appId}/public/data/orders`, order.id);
+            await deleteDoc(orderRef);
+        } catch (error) { console.warn("Archive to DB failed (permissions), kept in local storage.", error); }
+    };
+
+    const handleCleanHistory = async (retentionPeriod: '1w' | '2w' | '3w' | '1m' | 'all') => {
+        if (!confirm(`Are you sure you want to clean up the history? This cannot be undone.`)) return;
+        setIsCleaningHistory(true);
+        try {
+            const now = Date.now();
+            const oneDayMs = 24 * 60 * 60 * 1000;
+            const oneWeekMs = 7 * oneDayMs;
+            let cutoffTime = 0;
+
+            if (retentionPeriod === '1w') cutoffTime = now - oneWeekMs;
+            if (retentionPeriod === '2w') cutoffTime = now - (oneWeekMs * 2);
+            if (retentionPeriod === '3w') cutoffTime = now - (oneWeekMs * 3);
+            if (retentionPeriod === '1m') cutoffTime = now - (oneDayMs * 30);
+            if (retentionPeriod === 'all') cutoffTime = now + 1000;
+
+            const itemsToDelete = historyOrders.filter(order => {
+                let orderTimeMs = 0;
+                if (order.archivedAt) {
+                    if (typeof order.archivedAt === 'number') { orderTimeMs = order.archivedAt; } 
+                    else if (order.archivedAt instanceof Date) { orderTimeMs = order.archivedAt.getTime(); } 
+                    else if ((order.archivedAt as FirestoreTimestamp).seconds) { orderTimeMs = (order.archivedAt as FirestoreTimestamp).seconds * 1000; }
+                } else { orderTimeMs = (order.timestamp?.seconds || 0) * 1000; }
+                return orderTimeMs < cutoffTime; 
+            });
+
+            const newHistory = historyOrders.filter(o => !itemsToDelete.find(d => d.id === o.id));
+            setHistoryOrders(newHistory);
+            localStorage.setItem(`saffron_history_${appId}`, JSON.stringify(newHistory));
+
+            const deletePromises = itemsToDelete.map(order => deleteDoc(doc(db, `artifacts/${appId}/public/data/order_history`, order.id)));
+            await Promise.all(deletePromises);
+            setOrderStatus('success_history_cleaned');
+            setTimeout(() => setOrderStatus(null), 3000);
+        } catch (error) {
+            setOrderStatus('success_history_cleaned'); 
+            setTimeout(() => setOrderStatus(null), 3000);
+        } finally { setIsCleaningHistory(false); }
+    };
+
+    const handleLocalAddItem = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newItem.name || !newItem.price) return;
+        const itemToAdd: MenuItem = {
+            name: newItem.name, description: newItem.description, price: parseFloat(newItem.price),
+            image: newItem.image || `https://placehold.co/192x192/4F46E5/FFFFFF?text=${newItem.name}`
+        };
+        setDashboardMenuItems(prev => [...prev, itemToAdd]);
+        setNewItem({ name: '', description: '', price: '', image: '' });
+        setHasUnsavedChanges(true);
+    };
+
+    const handleLocalDeleteByIndex = (index: number) => {
+        const item = dashboardMenuItems[index];
+        if (item.id) { setDeletedIds(prev => { const newSet = new Set(prev); newSet.add(item.id!); return newSet; }); }
+        setDashboardMenuItems(prev => prev.filter((_, i) => i !== index));
+        setHasUnsavedChanges(true);
+    };
+
+    const handleSaveChanges = async () => {
+        setIsSaving(true);
+        const menuStorageKey = `saffron_menu_${appId}`;
+        localStorage.setItem(menuStorageKey, JSON.stringify(dashboardMenuItems));
+        setMenuItems(dashboardMenuItems); 
         
-        if (apiKey === "YOUR_GEMINI_API_KEY_HERE" || apiKey === "") {
-            return "AI feature disabled: Please provide a valid Gemini API key.";
+        try {
+            const deletePromises = Array.from(deletedIds).map(id => deleteDoc(doc(db, `artifacts/${appId}/public/data/menu`, id)));
+            const newItems = dashboardMenuItems.filter(i => !i.id);
+            const addPromises = newItems.map(item => addDoc(collection(db, `artifacts/${appId}/public/data/menu`), item));
+
+            await Promise.all([...deletePromises, ...addPromises]);
+            setOrderStatus('success_menu_update');
+            setHasUnsavedChanges(false);
+            setDeletedIds(new Set());
+        } catch (error: any) {
+            setOrderStatus('success_menu_update_local');
+            setHasUnsavedChanges(false);
+            setDeletedIds(new Set());
+        } finally {
+            setIsSaving(false);
+            setTimeout(() => setOrderStatus(null), 3000);
         }
+    };
 
-        setAiLoading(true);
-        setAiResult(null);
-
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${apiKey}`;
-
-        const payload = {
-            contents: [{ parts: [{ text: userQuery }] }],
-            systemInstruction: {
-                parts: [{ text: systemPrompt }]
-            },
-        };
-
-        for (let attempt = 0; attempt < retries; attempt++) {
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                const result = await response.json();
-                const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-                if (text) {
-                    setAiLoading(false);
-                    return text;
-                }
-                throw new Error("API response text missing.");
-
-            } catch (error) {
-                console.error(`Attempt ${attempt + 1} failed:`, error);
-                if (attempt < retries - 1) {
-                    const delay = Math.pow(2, attempt) * 1000;
-                    await new Promise(res => setTimeout(res, delay));
-                } else {
-                    setAiLoading(false);
-                    return "Sorry, the AI service is currently unavailable. Please try again later.";
-                }
-            }
-        }
-        setAiLoading(false);
-        return "An unexpected error occurred.";
-    }, [apiKey]);
-
-    const generateDescription = useCallback(async (item: MenuItem) => {
-        if (aiLoading) return;
-        setAiResult({ dishName: item.name, type: 'description', text: "" }); // Reset result for current dish
-        const systemPrompt = "You are a poetic, high-end restaurant copywriter specializing in Persian cuisine. Generate a single, captivating, and sensory description (max 2 sentences) for a menu item. Do not mention price or ingredients directly in the response, focus purely on the experience.";
-        const userQuery = `Generate an alternative description for the dish: ${item.name} which is currently described as: "${item.description}"`;
-        const resultText = await callGeminiApi(systemPrompt, userQuery);
-
-        if (resultText && !resultText.includes("AI feature disabled")) {
-            setAiResult({ dishName: item.name, type: 'description', text: resultText });
-        } else if (resultText.includes("AI feature disabled")) {
-            setAiResult({ dishName: item.name, type: 'error', text: resultText });
-        }
-    }, [aiLoading, callGeminiApi]);
-
-    const generatePairing = useCallback(async (item: MenuItem) => {
-        if (aiLoading) return;
-        setAiResult({ dishName: item.name, type: 'pairing', text: "" }); // Reset result for current dish
-        const systemPrompt = "You are a sommelier and culinary expert. Suggest one ideal pairing (either a drink like Doogh or a side dish like Salad Shirazi) for the following Persian dish and provide a single, short justification why it pairs well (max 2 sentences). Start the response with the suggested item name in bold, followed by the justification. Use Markdown for bolding.";
-        const userQuery = `Suggest a pairing for the Persian dish: ${item.name} which has the description: "${item.description}"`;
-        const resultText = await callGeminiApi(systemPrompt, userQuery);
-
-        if (resultText && !resultText.includes("AI feature disabled")) {
-            setAiResult({ dishName: item.name, type: 'pairing', text: resultText });
-        } else if (resultText.includes("AI feature disabled")) {
-            setAiResult({ dishName: item.name, type: 'error', text: resultText });
-        }
-    }, [aiLoading, callGeminiApi]);
-
-    // 4. GEMINI API Logic (Structured JSON Output for Orders) ---
-    const generateOrderSummaryAndActions = useCallback(async (order: Order, retries = 3) => {
-        if (orderAiLoadingId === order.id) return;
-
-        if (apiKey === "YOUR_GEMINI_API_KEY_HERE" || apiKey === "") {
-            setOrderAiResult(prev => ({
-                ...prev,
-                [order.id]: {
-                    summary: "AI feature disabled: Provide a valid Gemini API key.",
-                    actions: ["Manually review order details."]
-                }
-            }));
-            return;
-        }
-
-        setOrderAiLoadingId(order.id);
-        const orderDetails = order.items.map(item => `${item.quantity}x ${item.name}`).join('; ');
-        const userQuery = `Analyze the following restaurant order and provide a concise summary and key action items for the kitchen. Order details: ${orderDetails}. Customer name: ${order.customerName}. Special instructions: ${order.deliveryInstructions || 'None'}`;
-        const systemPrompt = "You are a professional kitchen manager. Your task is to analyze a raw order list and convert it into a concise summary for front-of-house staff (one short paragraph) and a list of urgent, practical action items for the kitchen chef. The output must be in JSON format.";
-        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${apiKey}`;
-
-        const payload = {
-            contents: [{ parts: [{ text: userQuery }] }],
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            tools: [{ "google_search": {} }], 
-            generationConfig: {
-                responseMimeType: "application/json",
-                responseSchema: {
-                    type: "OBJECT",
-                    properties: {
-                        "summary": { "type": "STRING", description: "A one-sentence summary of the order for front-of-house." },
-                        "actions": {
-                            "type": "ARRAY",
-                            "items": { "type": "STRING" },
-                            description: "A list of critical, action-oriented instructions for the kitchen."
-                        }
-                    },
-                    "propertyOrdering": ["summary", "actions"]
-                }
-            }
-        };
-
-        for (let attempt = 0; attempt < retries; attempt++) {
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-                const result = await response.json();
-                const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-
-                if (jsonText) {
-                    const parsedJson = JSON.parse(jsonText) as OrderAiResult;
-                    setOrderAiResult(prev => ({
-                        ...prev,
-                        [order.id]: {
-                            summary: parsedJson.summary,
-                            actions: parsedJson.actions
-                        }
-                    }));
-                    setOrderAiLoadingId(null);
-                    return;
-                }
-                throw new Error("API response text missing or invalid JSON.");
-
-            } catch (error) {
-                console.error(`Attempt ${attempt + 1} failed:`, error);
-                if (attempt < retries - 1) {
-                    const delay = Math.pow(2, attempt) * 1000;
-                    await new Promise(res => setTimeout(res, delay));
-                } else {
-                    setOrderAiLoadingId(null);
-                    setOrderAiResult(prev => ({
-                        ...prev,
-                        [order.id]: {
-                            summary: "Failed to generate AI summary: Service unavailable.",
-                            actions: ["Check API connection.", "Manually review order details."]
-                        }
-                    }));
-                    return;
-                }
-            }
-        }
-        setOrderAiLoadingId(null);
-    }, [orderAiLoadingId, apiKey]);
-
-    // 5. Order Logic
     const handleAddToCart = (item: MenuItem) => {
-        setCartItems(prevItems => {
-            const existingItem = prevItems.find(cartItem => cartItem.name === item.name);
-            if (existingItem) {
-                return prevItems.map(cartItem =>
-                    cartItem.name === item.name ? { ...cartItem, quantity: cartItem.quantity + 1 } : cartItem
-                );
-            }
-            return [...prevItems, { ...item, quantity: 1 }];
+        setCartItems(prev => {
+            const existing = prev.find(i => i.name === item.name);
+            if (existing) return prev.map(i => i.name === item.name ? { ...i, quantity: i.quantity + 1 } : i);
+            return [...prev, { ...item, quantity: 1 }];
         });
     };
 
-    const updateQuantity = (itemName: string, newQuantity: number) => {
-        if (newQuantity <= 0) {
-            setCartItems(prevItems => prevItems.filter(item => item.name !== itemName));
-        } else {
-            setCartItems(prevItems => prevItems.map(item =>
-                item.name === itemName ? { ...item, quantity: newQuantity } : item
-            ));
-        }
+    const updateQuantity = (name: string, qty: number) => {
+        setCartItems(prev => prev.map(i => i.name === name ? { ...i, quantity: Math.max(0, qty) } : i).filter(i => i.quantity > 0));
     };
 
-    const calculateTotal = (): number => {
-        return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
-    };
+    // 🚀 CRITICAL PAYMENT CONNECTION LOGIC
+    useEffect(() => {
+        const initializePayment = async () => {
+            // 1. Basic Guards: Only run if in checkout, have items, and backend is ready
+            if (activeSection !== 'checkout' || cartItems.length === 0 || !functions) return;
+            
+            const currentTotalCents = Math.round(calculateTotal() * 100);
+            if (currentTotalCents <= 0) return;
 
-    const calculateTotalFormatted = () => calculateTotal().toFixed(2);
+            // 2. Logic: Do we need a NEW connection?
+            // - If we don't have a secret yet -> YES
+            // - If the price changed from what we last set -> YES
+            const isAmountMismatch = paymentIntentAmount !== currentTotalCents;
+            const isSecretMissing = !paymentIntentClientSecret;
+
+            // If we have a secret and the amount matches, we are good. Do nothing.
+            if (!isSecretMissing && !isAmountMismatch) return;
+
+            // 3. Prevent overlapping calls (Infinite Loop Fix)
+            if (isFetchingPayment.current) return;
+
+            try {
+                isFetchingPayment.current = true;
+                
+                // Only clear the UI (show loader) if the amount actually changed.
+                // If it's just the first load (missing secret), we don't need to wipe, just load.
+                if (isAmountMismatch) {
+                    setPaymentIntentClientSecret(null);
+                }
+
+                const createPaymentIntent = httpsCallable(functions, 'createPaymentIntent');
+                const response: any = await createPaymentIntent({ amount: currentTotalCents, currency: 'usd' });
+                
+                const { clientSecret } = response.data;
+                
+                // 4. Update State Safely
+                setPaymentIntentAmount(currentTotalCents);
+                setPaymentIntentClientSecret(clientSecret);
+                // Force fresh Stripe Element mount to prevent "Sad Face"
+                setStripeRefreshKey(prev => prev + 1); 
+                
+            } catch (error: any) {
+                console.error("Payment Init Error:", error);
+                setOrderStatus("Error connecting to payment server.");
+            } finally {
+                isFetchingPayment.current = false;
+            }
+        };
+
+        initializePayment();
+
+        // ⚠️ DEPENDENCY SAFETY: 
+        // We only re-run if the Section changes (user enters checkout) or the Cart changes.
+        // We DO NOT include 'paymentIntentClientSecret' or 'paymentIntentAmount' here to prevent loops.
+    }, [activeSection, cartItems, functions, calculateTotal]); 
 
 
-    const placeOrder = async (e: React.FormEvent) => {
-        e.preventDefault();
+    // 🚀 CHECKOUT HANDLER: Triggered by Cart Button
+    const handleProceedToCheckout = useCallback(() => {
+        setActiveSection('checkout');
+        // The useEffect above will handle the actual server connection automatically
+    }, []);
 
-        if (cartItems.length === 0) {
-            setOrderStatus('validation_empty_cart');
-            setTimeout(() => setOrderStatus(null), 3000);
-            return;
-        }
-        if (!customerInfo.name || !customerInfo.phone) {
-            setOrderStatus('validation_missing_fields');
-            setTimeout(() => setOrderStatus(null), 3000);
-            return;
-        }
-        
-        if (isPlacingOrder) return; 
-
-        const isConfigured = Object.keys(firebaseConfig).length > 0 && firebaseConfig.projectId;
-        
-        if (!isAppReady || !db || !userId || !appId || !isConfigured) {
-            console.error("CRITICAL: Order attempted, but Firestore DB is not initialized or configured.");
-            setOrderStatus('config_missing_db');
-            setIsPlacingOrder(false);
-            setTimeout(() => setOrderStatus(null), 7000);
-            return;
-        }
-
-        setIsPlacingOrder(true);
-        setOrderStatus(null);
-
+    // --- AI Logic ---
+    const callGeminiApi = useCallback(async (systemPrompt: string, userQuery: string) => {
+        if (apiKey === "") return "AI feature disabled";
+        setAiLoading(true); setAiResult(null);
         try {
-            // Path: /artifacts/{appId}/public/data/orders (Public data for the dashboard)
-            const ordersPath = `artifacts/${appId}/public/data/orders`;
-
-            const orderData = {
-                userId: userId,
-                customerName: customerInfo.name,
-                customerPhone: customerInfo.phone,
-                customerEmail: customerInfo.email || 'N/A',
-                deliveryInstructions: customerInfo.instructions || 'None',
-                items: cartItems.map(item => ({
-                    name: item.name,
-                    quantity: item.quantity,
-                    price: item.price,
-                    subtotal: item.price * item.quantity
-                })),
-                totalAmount: calculateTotal(),
-                status: 'Pending Payment/Unpaid', // This is the default "Working On" status
-                payment: { method: 'Cash/Pickup (Unpaid)', transactionId: 'N/A' },
-                timestamp: serverTimestamp(),
-            };
-
-            await addDoc(collection(db, ordersPath), orderData);
-
-            // SUCCESS HANDLERS
-            setCartItems([]);
-            setCustomerInfo({ name: '', email: '', phone: '', instructions: '' });
-            setOrderStatus('success');
-            setActiveSection('menu'); 
-            
-        } catch (error) {
-            console.error("Error placing order (check create permissions):", error);
-            setOrderStatus('db_permission_error_write');
-            
-        } finally {
-            setIsPlacingOrder(false); 
-            setTimeout(() => setOrderStatus(null), 5000);
-        }
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${LLM_MODEL}:generateContent?key=${apiKey}`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: userQuery }] }], systemInstruction: { parts: [{ text: systemPrompt }] } })
+            });
+            const data = await response.json();
+            setAiLoading(false);
+            return data.candidates?.[0]?.content?.parts?.[0]?.text || "Error";
+        } catch { setAiLoading(false); return "Error"; }
+    }, []);
+    const generateDescription = async (item: MenuItem) => {
+        if(aiLoading) return;
+        const txt = await callGeminiApi("Poetic copywriter.", `Describe ${item.name}: ${item.description}`);
+        setAiResult({ dishName: item.name, type: txt.includes("disabled") ? 'error' : 'description', text: txt });
+    };
+    const generatePairing = async (item: MenuItem) => {
+        if(aiLoading) return;
+        const txt = await callGeminiApi("Sommelier.", `Pairing for ${item.name}: ${item.description}`);
+        setAiResult({ dishName: item.name, type: txt.includes("disabled") ? 'error' : 'pairing', text: txt });
     };
 
-    // Helper to render order status box
+    // --- Render Helpers ---
     const OrderStatusMessage = ({ status }: { status: string | null }) => {
         if (!status) return null;
-
-        let color, text, Icon;
-
-        switch (status) {
-            case 'success':
-                color = 'bg-green-500';
-                text = 'Order placed successfully! Pending payment at pickup/delivery.';
-                Icon = CheckCheck;
-                break;
-            case 'owner_login_success': 
-                color = 'bg-green-500';
-                text = 'Owner Signed In. Access granted to Dashboard.';
-                Icon = CheckCheck;
-                break;
-            case 'owner_signout_success': // <-- NEW STATUS
-                color = 'bg-blue-500';
-                text = 'Signed out successfully. Dashboard access requires re-login.';
-                Icon = LogOut;
-                break;
-            case 'owner_signout_failed':
-                color = 'bg-red-500';
-                text = 'Sign out failed.';
-                Icon = XCircle;
-                break;
-            case 'owner_login_failed': 
-                color = 'bg-red-500';
-                text = 'Owner Sign In Failed: Invalid email or password.';
-                Icon = XCircle;
-                break;
-            case 'db_permission_error_write':
-                color = 'bg-red-500';
-                text = 'Operation Failed: Security Rules denied the WRITE/UPDATE operation. (HINT: Check Firestore rules to allow "update" and "delete".)';
-                Icon = XCircle;
-                break;
-            case 'db_permission_error_read':
-                color = 'bg-red-500';
-                text = 'Dashboard Failed: Security Rules denied the READ operation. (HINT: Check your Firestore Security Rules.)';
-                Icon = XCircle;
-                break;
-            case 'config_missing_db': 
-                color = 'bg-red-600';
-                text = 'Order Failed: Firestore config is missing. Please replace the placeholder values in the firebaseConfig object to enable the database.';
-                Icon = AlertTriangle;
-                break;
-            case 'config_missing_auth':
-                color = 'bg-red-600';
-                text = 'Authentication Failed: Auth configuration is missing.';
-                Icon = AlertTriangle;
-                break;
-            case 'validation_missing_fields':
-                color = 'bg-yellow-500';
-                text = '⚠️ Please fill in your Full Name and Phone Number to proceed with checkout.';
-                Icon = ListOrdered;
-                break;
-            case 'validation_empty_cart':
-                color = 'bg-yellow-500';
-                text = '⚠️ Your cart is empty. Please add items before checking out.';
-                Icon = ShoppingCart;
-                break;
-            default:
-                return null;
-        }
-
+        let color = 'bg-red-500', text = status, Icon = XCircle;
+        
+        // Match specific success/error codes to user-friendly text
+        if (status === 'payment_success') { color = 'bg-emerald-600'; text = 'Payment Successful! Order Confirmed.'; Icon = DollarSign; }
+        else if (status === 'payment_success_demo') { color = 'bg-blue-600'; text = 'Payment Successful! (Demo Mode)'; Icon = WifiOff; }
+        else if (status === 'payment_failed') { text = 'Payment Failed. Please try again.'; }
+        else if (status === 'owner_login_success') { color = 'bg-green-500'; text = 'Owner Access Granted.'; Icon = CheckCheck; }
+        else if (status === 'owner_login_failed') { text = 'Login Failed. Invalid Credentials.'; Icon = XCircle; }
+        else if (status === 'owner_login_blocked') { text = 'Too many attempts. Account temporarily blocked.'; Icon = AlertTriangle; color = 'bg-amber-600'; }
+        else if (status === 'owner_signout_success') { color = 'bg-blue-500'; text = 'Signed Out.'; Icon = LogOut; }
+        else if (status === 'db_permission_error_read') { text = 'Dashboard: Access Denied.'; }
+        else if (status === 'success_menu_update') { color = 'bg-green-600'; text = 'Menu Updated Successfully.'; Icon = CheckCheck; }
+        else if (status === 'success_menu_update_local') { color = 'bg-blue-600'; text = 'Menu Saved Locally (Offline Mode).'; Icon = HardDrive; }
+        else if (status === 'success_menu_delete') { color = 'bg-green-600'; text = 'Menu Item Deleted.'; Icon = Trash2; }
+        else if (status === 'success_history_cleaned') { color = 'bg-green-600'; text = 'History Cleaned Successfully.'; Icon = Trash2; }
+        
         return (
             <div className={`fixed top-4 right-4 z-50 p-4 rounded-xl text-white font-semibold flex items-center shadow-2xl max-w-sm ${color}`}>
-                <Icon className="w-6 h-6 mr-3 flex-shrink-0" />
-                <span className="text-sm">{text}</span>
+                <Icon className="w-6 h-6 mr-3 flex-shrink-0" /> <span className="text-sm break-words">{text}</span>
             </div>
         );
     };
 
-    // --- Reusable Navigation Button Component ---
-    const NavButton = ({ sectionName, label, IconComponent, count, isOwner = false }: { sectionName: string, label: string, IconComponent: React.ElementType, count?: number, isOwner?: boolean }) => {
-        const baseBg = isOwner ? 'bg-gray-800' : 'bg-purple-600';
-        const baseHover = isOwner ? 'hover:bg-gray-900' : 'hover:bg-purple-700';
-        const ringColor = isOwner ? 'ring-gray-400' : 'ring-purple-400';
-
-        const activeClasses = activeSection === sectionName
-            ? `shadow-2xl ring-4 ${ringColor} scale-105 ring-offset-4 ring-offset-gray-100`
-            : `${baseHover} shadow-lg`;
-
-        const displayLabel = count !== undefined ? `${label} (${count})` : label;
-
+    const NavButton = ({ sectionName, label, IconComponent, count, isOwner = false }: any) => {
+        const activeClasses = activeSection === sectionName ? `shadow-2xl ring-4 ${isOwner?'ring-gray-400':'ring-purple-400'} scale-105 ring-offset-4 ring-offset-gray-100` : `${isOwner?'hover:bg-gray-900':'hover:bg-purple-700'} shadow-lg`;
         return (
-            <button
-                onClick={() => setActiveSection(sectionName)}
-                className={`
-                    w-24 h-24 md:w-28 md:h-28 rounded-full flex flex-col items-center justify-center
-                    font-semibold text-white text-xs md:text-sm font-sans
-                    transition duration-300 transform flex-shrink-0
-                    ${baseBg} ${activeClasses}
-                `}
-            >
-                <IconComponent className="mb-1" size={24} />
-                <span className="text-center">{displayLabel}</span>
+            <button onClick={() => setActiveSection(sectionName)} className={`w-24 h-24 md:w-28 md:h-28 rounded-full flex flex-col items-center justify-center font-semibold text-white text-xs md:text-sm font-sans transition duration-300 transform flex-shrink-0 ${isOwner?'bg-gray-800':'bg-purple-600'} ${activeClasses}`}>
+                <IconComponent className="mb-1" size={24} /> <span>{count ? `${label} (${count})` : label}</span>
             </button>
         );
     };
 
-    // --- Reusable Mobile Navigation Button Component (Bottom Bar) ---
-    const MobileNavButton = ({ sectionName, IconComponent, count = 0, label }: { sectionName: string, IconComponent: React.ElementType, count?: number, label: string }) => {
-        const isActive = activeSection === sectionName;
-        const colorClass = isActive ? 'text-purple-600' : 'text-gray-500 hover:text-purple-600';
+    const MobileNavButton = ({ sectionName, IconComponent, count = 0, label }: any) => (
+        <button onClick={() => setActiveSection(sectionName)} className={`flex flex-col items-center p-2 transition-colors duration-200 relative ${activeSection === sectionName ? 'text-purple-600' : 'text-gray-500 hover:text-purple-600'} w-full`}>
+            {activeSection === sectionName && <div className={`absolute top-0 w-8 h-1 rounded-b-full ${sectionName === 'dashboard' ? 'border-gray-800' : 'border-purple-600'}`}></div>}
+            <IconComponent className="w-6 h-6" />
+            {count > 0 && sectionName === 'cart' && <span className="absolute top-1 right-3 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">{count}</span>}
+            <span className="text-[10px] mt-1 font-semibold">{label}</span>
+        </button>
+    );
 
-        const isDashboard = sectionName === 'dashboard';
-        const activeBar = isDashboard 
-            ? 'border-gray-800' 
-            : 'border-purple-600';
-
-        return (
-            <button
-                onClick={() => setActiveSection(sectionName)}
-                className={`flex flex-col items-center p-2 transition-colors duration-200 relative ${colorClass} w-full`}
-            >
-                {isActive && <div className={`absolute top-0 w-8 h-1 rounded-b-full ${activeBar}`}></div>}
-                <IconComponent className="w-6 h-6" />
-                {count > 0 && sectionName === 'cart' && ( 
-                    <span className="absolute top-1 right-3 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center font-bold">
-                        {count}
-                    </span>
-                )}
-                <span className="text-[10px] mt-1 font-semibold">{label}</span>
-            </button>
-        );
-    };
-
-
-    // --- RENDERING SECTIONS ---
-    
-    // ====================================================================================
-    // --- Owner Login Component (UI for Email/Password) ---
-    // ====================================================================================
     const OwnerLogin = () => {
-        const [email, setEmail] = useState('');
-        const [password, setPassword] = useState('');
-        const [loading, setLoading] = useState(false);
-        const [error, setError] = useState<string | null>(null);
-
-        const handleSubmit = async (e: React.FormEvent) => {
-            e.preventDefault();
-            setError(null);
-            setLoading(true);
-
-            // Pass the credentials to the global handler
-            const success = await handleOwnerSignIn(email, password);
-            
-            if (!success) {
-                setError('Invalid email or password. Access Denied.');
-            } else {
-                 // Success is handled by the parent component's state update (isOwner=true)
-                 setEmail('');
-                 setPassword('');
-                 setActiveSection('dashboard'); 
-            }
-            setLoading(false);
-        };
-
+        const [e, setE] = useState(''); const [p, setP] = useState('');
+        const [showPassword, setShowPassword] = useState(false);
         return (
             <div className="max-w-md mx-auto p-10 bg-white rounded-2xl shadow-2xl text-center mt-16">
-                <ChefHat className="w-12 h-12 mx-auto mb-4 text-gray-800" />
-                <h2 className="text-2xl font-extrabold text-gray-900 mb-2">Owner Login Required</h2>
-                <p className="text-gray-600 mb-6 text-sm">
-                    Enter your owner credentials to access the kitchen dashboard.
-                </p>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <input
-                        type="email"
-                        placeholder="Owner Email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
-                        required
-                    />
-                    <input
-                        type="password"
-                        placeholder="Owner Password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
-                        required
-                    />
-
-                    {error && (
-                        <p className="text-sm text-red-500 font-semibold mt-2 flex items-center justify-center">
-                            <AlertTriangle className="w-4 h-4 mr-2" /> {error}
-                        </p>
-                    )}
-
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-gray-800 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-gray-900 transition disabled:bg-gray-500 disabled:cursor-not-allowed flex items-center justify-center text-lg"
-                    >
-                        {loading ? (
-                            <><Loader2 className="animate-spin mr-2 w-6 h-6" /> Signing In...</>
-                        ) : (
-                            <><CheckCheck className="w-6 h-6 mr-2" /> Sign In</>
-                        )}
-                    </button>
+                <ChefHat className="w-12 h-12 mx-auto mb-4 text-gray-800" /><h2 className="text-2xl font-extrabold mb-6">Owner Login</h2>
+                <form onSubmit={(evt) => { evt.preventDefault(); handleOwnerSignIn(e, p); }} className="space-y-4">
+                    <input type="email" placeholder="Email" value={e} onChange={ev=>setE(ev.target.value)} className="w-full p-3 border rounded" required/>
+                    <div className="relative">
+                        <input type={showPassword ? "text" : "password"} placeholder="Password" value={p} onChange={ev=>setP(ev.target.value)} className="w-full p-3 border rounded pr-10" required />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">{showPassword ? <EyeOff size={20} /> : <Eye size={20} />}</button>
+                    </div>
+                    <button className="w-full bg-gray-800 text-white font-bold py-3 rounded shadow">Sign In</button>
                 </form>
             </div>
         );
     };
-    // ====================================================================================
-    
-    // ====================================================================================
-    // --- KITCHEN ORDER TICKET COMPONENT (FOR DASHBOARD) ---
-    // ====================================================================================
+
     const KitchenOrderTicket = ({ order }: { order: Order }) => {
-        const isWorkingOn = order.status === 'Pending Payment/Unpaid';
-        const baseClasses = "p-4 shadow-lg rounded-xl transition-all duration-300 transform hover:scale-[1.01] flex flex-col justify-between";
-
-        // Action Handlers
-        const updateOrderStatus = useCallback(async (newStatus: string) => {
-            try {
-                if (!db) { 
-                    console.error("Database not initialized");
-                    return;
-                }
-                const orderDocRef = doc(db, `artifacts/${appId}/public/data/orders`, order.id);
-                await updateDoc(orderDocRef, {
-                    status: newStatus,
-                });
-            } catch (error: any) { 
-                console.error("Error updating order status:", error);
-                if (error && error.message.includes('permission-denied')) {
-                    setOrderStatus('db_permission_error_write'); 
-                }
-            }
-        }, [order.id, db, appId]); 
-
-        const handlePickUp = useCallback(async () => {
-            try {
-                if (!db) { 
-                    console.error("Database not initialized");
-                    return;
-                }
-                const orderDocRef = doc(db, `artifacts/${appId}/public/data/orders`, order.id);
-                await deleteDoc(orderDocRef);
-            } catch (error: any) { 
-                console.error("Error deleting order:", error);
-                if (error && error.message.includes('permission-denied')) {
-                    setOrderStatus('db_permission_error_write'); 
-                }
-            }
-        }, [order.id, db, appId]); 
-
-
-        const handleDoneClick = () => updateOrderStatus('Done'); 
-        const handleMoveToWorkingOnClick = () => updateOrderStatus('Pending Payment/Unpaid'); 
-
-        // Button Styling
-        const btnClasses = "px-3 py-2 rounded-lg font-semibold transition duration-200 shadow-md flex items-center justify-center text-sm";
-
+        const isPaid = order.status === 'Paid'; const isWorking = order.status !== 'Done';
+        const updateStatus = (s: string) => updateDoc(doc(db, `artifacts/${appId}/public/data/orders`, order.id), { status: s });
         return (
-            <div className={`${baseClasses} ${isWorkingOn ? 'bg-amber-50 border-t-4 border-amber-500' : 'bg-green-50 border-t-4 border-green-500'}`}>
+            <div className={`p-4 shadow-lg rounded-xl flex flex-col justify-between ${isWorking ? (isPaid ? 'bg-indigo-50 border-t-4 border-indigo-500' : 'bg-amber-50 border-t-4 border-amber-500') : 'bg-green-50 border-t-4 border-green-500'}`}>
                 <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-lg font-bold text-gray-800">Order #{order.id.substring(0, 8)}</h3>
-                    <p className={`text-xs font-medium px-2 py-1 rounded-full ${isWorkingOn ? 'bg-amber-200 text-amber-800' : 'bg-green-200 text-green-800'}`}>
-                        {isWorkingOn ? 'WORKING ON' : 'READY'}
-                    </p>
+                    <h3 className="text-lg font-bold text-gray-800">#{order.id.substring(0,8)}</h3>
+                    <span className={`text-xs px-2 py-1 rounded-full font-bold ${isWorking ? (isPaid ? 'bg-indigo-200 text-indigo-800':'bg-amber-200 text-amber-800') : 'bg-green-200 text-green-800'}`}>{isPaid?'PAID':(isWorking?'UNPAID':'READY')}</span>
                 </div>
-
-                <p className="text-xl font-extrabold text-gray-900 mb-1">{order.customerName}</p>
-                <p className="text-xs text-gray-500 mb-1">
-                    {order.timestamp?.seconds ? new Date(order.timestamp.seconds * 1000).toLocaleString() : 'N/A'}
-                </p>
+                <p className="text-xl font-extrabold">{order.customerName}</p>
+                <p className="text-xs text-gray-500 mb-1">{order.timestamp?.seconds ? new Date(order.timestamp.seconds*1000).toLocaleString() : 'N/A'}</p>
                 <p className="text-lg font-bold text-purple-700 mb-3">${order.totalAmount.toFixed(2)}</p>
-
-                <ul className="list-disc pl-5 mb-4 text-gray-700 space-y-1 text-sm">
-                    {order.items.map((item, index) => (
-                        <li key={index} className="truncate">
-                            {item.quantity}x <span className="font-bold">{item.name}</span>
-                        </li>
-                    ))}
-                </ul>
-                <p className="text-xs italic text-gray-600 mb-4">Instructions: {order.deliveryInstructions}</p>
-
-                <div className="mt-auto pt-4 border-t border-gray-200">
-                    {isWorkingOn ? (
-                        // Button for Working On section
-                        <button
-                            onClick={handleDoneClick}
-                            className={`${btnClasses} w-full bg-emerald-600 text-white hover:bg-emerald-700`}
-                        >
-                            <CheckCheck className="w-5 h-5 mr-2" />
-                            Order Done
-                        </button>
-                    ) : (
-                        // Buttons for DONE section
-                        <div className="flex space-x-2">
-                            <button
-                                onClick={handleMoveToWorkingOnClick}
-                                className={`${btnClasses} flex-1 bg-sky-100 text-sky-800 hover:bg-sky-200`}
-                            >
-                                <RefreshCw className="w-4 h-4 mr-1" />
-                                Back to Working On
-                            </button>
-                            <button
-                                onClick={handlePickUp}
-                                className={`${btnClasses} bg-red-500 text-white hover:bg-red-600`}
-                            >
-                                <Trash2 className="w-4 h-4" />
-                                Picked up
-                            </button>
-                        </div>
-                    )}
-                </div>
+                <div className="text-sm mb-4">{order.items.map((i,x)=><div key={x}>{i.quantity}x <b>{i.name}</b></div>)}</div>
+                {isWorking ? (
+                    <button onClick={()=>updateStatus('Done')} className="w-full bg-emerald-600 text-white py-2 rounded font-bold"><CheckCheck className="inline w-4 h-4"/> Done</button>
+                ) : (
+                    <div className="flex gap-2">
+                        <button onClick={()=>updateStatus(isPaid?'Paid':'Pending Payment/Unpaid')} className="flex-1 bg-sky-100 text-sky-800 py-2 rounded font-bold"><RefreshCw className="inline w-4 h-4"/> Undo</button>
+                        <button onClick={() => handleArchiveOrder(order)} className="bg-gray-500 text-white px-4 py-2 rounded font-bold hover:bg-gray-700 flex items-center justify-center tooltip" title="Archive to History"><Archive className="inline w-4 h-4"/></button>
+                    </div>
+                )}
             </div>
         );
     };
-    
-    // Home Section Renderer
-    const renderHome = () => (
-        <div className="text-center py-16 px-4 bg-purple-50 rounded-2xl shadow-xl">
-            <ChefHat className="w-16 h-16 mx-auto mb-4 text-purple-600" />
-            <h2 className="text-6xl font-extrabold text-gray-900 font-serif mb-4">
-                The Saffron Table
-            </h2>
-            <p className="text-xl text-gray-600 mb-8 max-w-lg mx-auto">
-                Experience the rich flavors and aromatic traditions of authentic Persian cuisine. Order your feast now!
-            </p>
-            <div className="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-6">
-                <button
-                    onClick={() => setActiveSection('menu')}
-                    className="bg-purple-600 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-purple-700 transition transform hover:scale-105"
-                >
-                    View Full Menu
-                </button>
-                <button
-                    onClick={() => setActiveSection('dashboard')}
-                    className="bg-gray-800 text-white font-bold py-3 px-8 rounded-full shadow-lg hover:bg-gray-900 transition transform hover:scale-105 flex items-center justify-center"
-                >
-                    <ChefHat className="w-5 h-5 mr-2" /> Owner Dashboard
-                </button>
-            </div>
 
-            <div className="mt-12 pt-8 border-t border-purple-200">
-                <h3 className="text-2xl font-bold text-gray-800 mb-4">Contact Us</h3>
-                <div className="flex justify-center flex-wrap gap-6 text-gray-600">
-                    <p className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-purple-600" /> 123 Saffron Lane, Tehrangeles, CA</p>
-                    <p className="flex items-center"><Phone className="w-4 h-4 mr-2 text-purple-600" /> (555) 555-SAFR</p>
-                    <p className="flex items-center"><Mail className="w-4 h-4 mr-2 text-purple-600" /> orders@saffrontable.com</p>
-                </div>
+    // --- Page Renderers ---
+    const renderHome = () => (
+        <div className="text-center py-16 px-4 bg-purple-50 rounded-2xl shadow-xl relative overflow-hidden">
+            <ChefHat className="w-16 h-16 mx-auto mb-4 text-purple-600" /><h2 className="text-6xl font-extrabold font-serif mb-4">The Saffron Table</h2>
+            <p className="text-xl text-gray-600 mb-8">Experience the rich flavors and aromatic traditions.</p>
+            <div className="flex justify-center gap-6">
+                <button onClick={()=>setActiveSection('menu')} className="bg-purple-600 text-white font-bold py-3 px-8 rounded-full shadow-lg transform hover:scale-105 transition">View Full Menu</button>
+                <button onClick={()=>setActiveSection('dashboard')} className="bg-gray-800 text-white font-bold py-3 px-8 rounded-full shadow-lg transform hover:scale-105 transition flex items-center"><ChefHat className="mr-2"/> Owner</button>
             </div>
         </div>
     );
 
-    // Menu Section Renderer
     const renderMenu = () => (
         <div className="space-y-12">
-            <h2 className="text-4xl font-extrabold text-gray-900 font-sans flex items-center">
-                <Utensils className="w-8 h-8 mr-3 text-purple-600" />
-                The Persian Feast Menu
-            </h2>
+            <h2 className="text-4xl font-extrabold font-sans flex items-center"><Utensils className="w-8 h-8 mr-3 text-purple-600"/> The Persian Feast Menu</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                {menuItems.map((item) => (
-                    <div key={item.name} className="bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition duration-300 flex flex-col">
-                        <img
-                            src={item.image}
-                            alt={item.name}
-                            className="w-full h-48 object-cover object-center"
-                            onError={(e) => {
-                                e.currentTarget.onerror = null;
-                                e.currentTarget.src = `https://placehold.co/400x192/E5E7EB/4B5563?text=${item.name.slice(0, 8)}...`;
-                            }}
-                        />
+                {menuItems.map(item => (
+                    <div key={item.id || item.name} className="bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col">
+                        <img src={item.image} className="w-full h-48 object-cover" onError={(e)=>{e.currentTarget.src="https://placehold.co/400x192?text=Dish"}}/>
                         <div className="p-6 flex flex-col flex-grow">
-                            <div className="flex justify-between items-start mb-2">
-                                <h3 className="text-2xl font-bold text-gray-900 font-serif">{item.name}</h3>
-                                <span className="text-xl font-extrabold text-purple-600">${item.price.toFixed(2)}</span>
-                            </div>
+                            <div className="flex justify-between font-bold mb-2"><h3 className="text-2xl font-serif">{item.name}</h3><span className="text-xl text-purple-600">${item.price.toFixed(2)}</span></div>
                             <p className="text-gray-600 text-sm mb-4 flex-grow">{item.description}</p>
-
-                            {/* AI Buttons */}
-                            <div className="flex space-x-2 mb-4">
-                                <button
-                                    onClick={() => generateDescription(item)}
-                                    disabled={aiLoading}
-                                    className="flex-1 text-xs px-3 py-1 bg-purple-100 text-purple-700 font-semibold rounded-full hover:bg-purple-200 transition disabled:bg-gray-200 disabled:text-gray-600 flex items-center justify-center"
-                                >
-                                    {aiLoading && aiResult?.dishName === item.name && aiResult?.type === 'description' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <BookOpen className="w-4 h-4 mr-1" />}
-                                    {!aiLoading || aiResult?.dishName !== item.name || aiResult?.type !== 'description' ? 'Poetic Description' : 'Loading...'}
-                                </button>
-                                <button
-                                    onClick={() => generatePairing(item)}
-                                    disabled={aiLoading}
-                                    className="flex-1 text-xs px-3 py-1 bg-purple-100 text-purple-700 font-semibold rounded-full hover:bg-purple-200 transition disabled:bg-gray-200 disabled:text-gray-600 flex items-center justify-center"
-                                >
-                                    {aiLoading && aiResult?.dishName === item.name && aiResult?.type === 'pairing' ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <ChefHat className="w-4 h-4 mr-1" />}
-                                    {!aiLoading || aiResult?.dishName !== item.name || aiResult?.type !== 'pairing' ? 'Pairing Suggestion' : 'Loading...'}
-                                </button>
+                            <div className="flex gap-2 mb-4">
+                                <button onClick={()=>generateDescription(item)} className="flex-1 bg-purple-100 text-purple-700 text-xs py-1 rounded">{aiLoading && aiResult?.dishName === item.name && aiResult.type === 'description' ? <Loader2 className="animate-spin mx-auto w-4 h-4"/> : "Poetic Desc"}</button>
+                                <button onClick={()=>generatePairing(item)} className="flex-1 bg-purple-100 text-purple-700 text-xs py-1 rounded">{aiLoading && aiResult?.dishName === item.name && aiResult.type === 'pairing' ? <Loader2 className="animate-spin mx-auto w-4 h-4"/> : "Pairing"}</button>
                             </div>
-                            
-                            {/* AI Result Display */}
-                            {aiResult && aiResult.dishName === item.name && (
-                                <div className={`p-3 mt-2 rounded-lg text-sm ${aiResult.type === 'error' ? 'bg-red-100 text-red-800 border-l-4 border-red-500' : 'bg-green-50 text-green-800 border-l-4 border-green-500'}`}>
-                                    {aiResult.type === 'error' && <AlertTriangle className="w-4 h-4 mr-2 inline" />}
-                                    <div dangerouslySetInnerHTML={{ __html: aiResult.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }} />
-                                </div>
-                            )}
-
-                            {/* Add to Cart Button */}
-                            <button
-                                onClick={() => handleAddToCart(item)}
-                                className="mt-4 w-full bg-purple-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-purple-700 transition transform hover:scale-[1.01] flex items-center justify-center"
-                            >
-                                <ShoppingCart className="w-5 h-5 mr-2" />
-                                Add to Cart
-                            </button>
+                            {aiResult && aiResult.dishName === item.name && <div className={`p-3 mb-2 text-sm rounded ${aiResult.type==='error'?'bg-red-100':'bg-green-50'}`} dangerouslySetInnerHTML={{__html: aiResult.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}}/>}
+                            <button onClick={()=>handleAddToCart(item)} className="w-full bg-purple-600 text-white font-bold py-3 rounded-xl shadow-lg hover:bg-purple-700 transition transform hover:scale-[1.01]"><ShoppingCart className="inline mr-2"/> Add to Cart</button>
                         </div>
                     </div>
                 ))}
@@ -3452,324 +895,214 @@ export default function App() {
         </div>
     );
 
-    // Cart Section Renderer
     const renderCart = () => (
-        <div className="space-y-8 max-w-4xl mx-auto">
-            <h2 className="text-4xl font-extrabold text-gray-900 font-sans flex items-center">
-                <ShoppingCart className="w-8 h-8 mr-3 text-purple-600" />
-                Your Order Basket
-            </h2>
-
-            {cartItems.length === 0 ? (
-                <div className="text-center p-12 bg-gray-50 rounded-2xl shadow-inner">
-                    <p className="text-xl text-gray-500 font-semibold">Your cart is currently empty. <span className="block text-sm font-normal pt-2">Head to the menu to start your Persian feast!</span></p>
-                    <button
-                        onClick={() => setActiveSection('menu')}
-                        className="mt-6 bg-purple-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:bg-purple-700 transition"
-                    >
-                        View Menu
-                    </button>
-                </div>
+        <div className="max-w-4xl mx-auto space-y-8">
+            <h2 className="text-4xl font-extrabold font-sans flex items-center"><ShoppingCart className="w-8 h-8 mr-3 text-purple-600"/> Your Order Basket</h2>
+            {cartItems.length===0 ? (
+                <div className="text-center p-12 bg-gray-50 rounded-2xl"><p className="text-xl text-gray-500">Cart is empty.</p><button onClick={()=>setActiveSection('menu')} className="mt-6 bg-purple-600 text-white font-bold py-3 px-6 rounded-xl">View Menu</button></div>
             ) : (
                 <div className="space-y-6">
-                    <div className="bg-white rounded-2xl shadow-xl divide-y divide-purple-100 p-4">
-                        {cartItems.map(item => (
-                            <div key={item.name} className="flex items-center justify-between py-4">
-                                <div className="flex items-center space-x-4">
-                                    <img
-                                        src={item.image}
-                                        alt={item.name}
-                                        className="w-16 h-16 rounded-lg object-cover"
-                                        onError={(e) => {
-                                            e.currentTarget.onerror = null;
-                                            e.currentTarget.src = `https://placehold.co/64x64/E5E7EB/4B5563?text=Dish`;
-                                        }}
-                                    />
-                                    <div>
-                                        <p className="font-semibold text-lg text-gray-900">{item.name}</p>
-                                        <p className="text-sm text-gray-500">${item.price.toFixed(2)} each</p>
-                                    </div>
-                                </div>
-                                
-                                <div className="flex items-center space-x-4">
-                                    <div className="flex items-center border border-purple-300 rounded-full">
-                                        <button
-                                            onClick={() => updateQuantity(item.name, item.quantity - 1)}
-                                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-l-full transition"
-                                        >
-                                            <Minus className="w-4 h-4" />
-                                        </button>
-                                        <span className="px-3 font-semibold text-gray-800">{item.quantity}</span>
-                                        <button
-                                            onClick={() => updateQuantity(item.name, item.quantity + 1)}
-                                            className="p-2 text-purple-600 hover:bg-purple-50 rounded-r-full transition"
-                                        >
-                                            <Plus className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                    <button
-                                        onClick={() => updateQuantity(item.name, 0)}
-                                        className="p-2 text-red-500 hover:bg-red-50 rounded-full transition"
-                                    >
-                                        <XCircle className="w-5 h-5" />
-                                    </button>
+                    <div className="bg-white rounded-2xl shadow-xl p-4 divide-y divide-purple-100">
+                        {cartItems.map(i=>(
+                            <div key={i.name} className="flex justify-between items-center py-4">
+                                <div className="flex items-center gap-4"><img src={i.image} className="w-16 h-16 rounded object-cover"/><div><p className="font-bold">{i.name}</p><p className="text-sm">${i.price.toFixed(2)}</p></div></div>
+                                <div className="flex items-center gap-3 border rounded-full p-1">
+                                    <button onClick={()=>updateQuantity(i.name, i.quantity-1)} className="p-2 text-purple-600"><Minus size={16}/></button><span className="font-bold">{i.quantity}</span><button onClick={()=>updateQuantity(i.name, i.quantity+1)} className="p-2 text-purple-600"><Plus size={16}/></button>
                                 </div>
                             </div>
                         ))}
                     </div>
-
-                    <div className="bg-purple-50 p-6 rounded-2xl shadow-inner flex justify-between items-center">
-                        <p className="text-xl font-bold text-gray-800">Order Subtotal:</p>
-                        <p className="text-3xl font-extrabold text-purple-700">${calculateTotalFormatted()}</p>
-                    </div>
-
-                    <button
-                        onClick={() => setActiveSection('checkout')}
-                        className="w-full bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-green-600 transition transform hover:scale-[1.01] flex items-center justify-center text-xl"
-                    >
-                        <CreditCard className="w-6 h-6 mr-2" />
-                        Proceed to Checkout
-                    </button>
+                    {/* 🚀 CALLS SMART HANDLER - WILL FAIL IF BACKEND MISSING */}
+                    <button onClick={handleProceedToCheckout} className="w-full bg-green-500 text-white font-bold py-4 rounded-xl shadow-lg text-xl"><CreditCard className="inline mr-2"/> Proceed to Checkout (${calculateTotal().toFixed(2)})</button>
                 </div>
             )}
         </div>
     );
 
-    // Checkout Section Renderer
-    const renderCheckout = () => (
-        <div className="space-y-8 max-w-xl mx-auto">
-            <h2 className="text-4xl font-extrabold text-gray-900 font-sans flex items-center">
-                <ListOrdered className="w-8 h-8 mr-3 text-purple-600" />
-                Delivery & Payment
-            </h2>
-
-            <div className="bg-white p-8 rounded-2xl shadow-xl">
-                <form onSubmit={placeOrder} className="space-y-6">
-                    <div className="bg-purple-50 p-4 rounded-xl border border-purple-200">
-                        <p className="text-lg font-bold text-purple-800 mb-2">Order Summary</p>
-                        <div className="flex justify-between text-gray-700 text-sm">
-                            <span>{cartItems.length} items</span>
-                            <span className="text-xl font-extrabold text-purple-700">${calculateTotalFormatted()}</span>
-                        </div>
-                    </div>
-
-                    <h3 className="text-xl font-bold text-gray-800 pt-2 border-t border-gray-100">Contact & Delivery</h3>
-
-                    <div className="space-y-4">
-                        <input
-                            type="text"
-                            placeholder="* Full Name"
-                            value={customerInfo.name}
-                            onChange={(e) => setCustomerInfo(p => ({ ...p, name: e.target.value }))}
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
-                            required
-                        />
-                        <input
-                            type="tel"
-                            placeholder="* Phone Number (e.g., 555-123-4567)"
-                            value={customerInfo.phone}
-                            onChange={(e) => setCustomerInfo(p => ({ ...p, phone: e.target.value }))}
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
-                            required
-                        />
-                        <input
-                            type="email"
-                            placeholder="Email (Optional)"
-                            value={customerInfo.email}
-                            onChange={(e) => setCustomerInfo(p => ({ ...p, email: e.target.value }))}
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
-                        />
-                        <textarea
-                            placeholder="Delivery Instructions (e.g., House number, street name, no nuts please)"
-                            value={customerInfo.instructions}
-                            onChange={(e) => setCustomerInfo(p => ({ ...p, instructions: e.target.value }))}
-                            rows={3}
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500"
-                        />
-                    </div>
-
-                    <div className="p-4 bg-yellow-100 rounded-xl flex items-start space-x-3">
-                        <DollarSign className="w-5 h-5 text-yellow-700 mt-1 flex-shrink-0" />
-                        <p className="text-sm text-yellow-800 font-semibold">
-                            Payment Method: Cash or Card upon Pickup/Delivery. <br/>
-                            <span className="font-normal italic">Your order will be placed in the system as "Pending Payment."</span>
-                        </p>
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={isPlacingOrder || cartItems.length === 0}
-                        className="w-full bg-purple-600 text-white font-bold py-4 rounded-xl shadow-lg hover:bg-purple-700 transition transform hover:scale-[1.01] disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center text-xl"
-                    >
-                        {isPlacingOrder ? (
-                            <><Loader2 className="animate-spin mr-2 w-6 h-6" /> Placing Order...</>
-                        ) : (
-                            <><CheckCheck className="w-6 h-6 mr-2" /> Confirm & Place Order</>
-                        )}
-                    </button>
-                </form>
+    const renderCheckout = () => {
+        // 🚀 FIX: We REMOVED the "if (activeSection !== 'checkout') return null;" line.
+        // This keeps the Stripe component alive in the background (via display:none),
+        // preventing the crash when you navigate away and come back.
+        
+        return (
+            <div className="space-y-8 max-w-xl mx-auto">
+                <h2 className="text-4xl font-extrabold text-gray-900 font-sans flex items-center"><ListOrdered className="w-8 h-8 mr-3 text-purple-600" /> Checkout</h2>
+                <div className="bg-white p-8 rounded-2xl shadow-xl">
+                    <StripePaymentSection 
+                        clientSecret={paymentIntentClientSecret} 
+                        cartItems={cartItems} 
+                        customerInfo={customerInfo} 
+                        setCustomerInfo={setCustomerInfo} 
+                        totalAmount={calculateTotal()} 
+                        userId={userId || 'guest'} 
+                        db={db} 
+                        appId={appId} 
+                        onSuccess={(status: string) => { 
+                            setCartItems([]); 
+                            setPaymentIntentClientSecret(null); // 🚀 FORCE CLEAR SECRETS ON SUCCESS
+                            setOrderStatus(status); 
+                            setActiveSection('menu'); 
+                        }} 
+                        onError={(err: string) => setOrderStatus(err)} 
+                        refreshKey={stripeRefreshKey} // 🚀 Pass key to force fresh mount
+                    />
+                </div>
+                <button onClick={() => setActiveSection('cart')} className="w-full text-sm text-gray-500 hover:text-purple-600 transition font-medium flex items-center justify-center pt-2">&larr; Back to Cart</button>
             </div>
+        );
+    };
 
-            <button
-                onClick={() => setActiveSection('cart')}
-                className="w-full text-sm text-gray-500 hover:text-purple-600 transition font-medium flex items-center justify-center pt-2"
-            >
-                &larr; Back to Cart
-            </button>
-        </div>
-    );
-
-    // ====================================================================================
-    // --- MODIFIED: Dashboard Section Renderer (Sign Out Button Added) ---
-    // ====================================================================================
     const renderDashboard = () => {
+        if (!isOwner) return <OwnerLogin />;
         
-        // --- OWNER ACCESS CHECK ---
-        if (!isOwner) {
-            return <OwnerLogin />; 
-        }
-        
-        // Filter orders based on status
-        const workingOnOrders = orders.filter(o => o.status === 'Pending Payment/Unpaid');
-        const doneOrders = orders.filter(o => o.status === 'Done');
-
         return (
             <div className="space-y-8">
-                {/* Dashboard Header */}
                 <div className="flex justify-between items-center flex-wrap gap-4">
-                    <h2 className="text-4xl font-extrabold text-gray-900 font-sans flex items-center">
-                        <ChefHat className="w-8 h-8 mr-3 text-gray-800" />
-                        Kitchen Dashboard ({orders.length} Total)
-                    </h2>
-                    
-                    {/* --- NEW: Sign Out Button --- */}
-                    <button
-                        onClick={handleSignOut}
-                        className="flex items-center bg-red-600 text-white font-semibold py-2 px-4 rounded-xl shadow-lg hover:bg-red-700 transition"
-                    >
-                        <LogOut className="w-5 h-5 mr-2" />
-                        Sign Out
-                    </button>
-                    {/* --------------------------- */}
-                </div>
-
-
-                <div className="p-4 bg-gray-100 rounded-xl shadow-inner">
-                    <p className="text-sm font-semibold text-gray-700 mb-2">System Info:</p>
-                    <div className="flex flex-wrap text-xs text-gray-600 font-mono space-x-4">
-                        <span>App ID: <span className="font-bold text-gray-800">{appId}</span></span>
-                        <span>User ID (Current Viewer): <span className="font-bold text-gray-800">{userId || 'N/A'}</span></span>
+                    <h2 className="text-4xl font-extrabold flex items-center"><ChefHat className="mr-3"/> Owner Dashboard</h2>
+                    <div className="flex gap-4">
+                        <div className="flex bg-gray-200 rounded-lg p-1">
+                            <button onClick={()=>setDashboardTab('orders')} className={`px-4 py-2 rounded-lg font-bold transition ${dashboardTab==='orders'?'bg-white text-gray-900 shadow':'text-gray-500 hover:text-gray-900'}`}>Orders</button>
+                            <button onClick={()=>setDashboardTab('menu')} className={`px-4 py-2 rounded-lg font-bold transition ${dashboardTab==='menu'?'bg-white text-gray-900 shadow':'text-gray-500 hover:text-gray-900'}`}>Menu Manager</button>
+                            <button onClick={()=>setDashboardTab('history')} className={`px-4 py-2 rounded-lg font-bold transition ${dashboardTab==='history'?'bg-white text-gray-900 shadow':'text-gray-500 hover:text-gray-900'}`}>History</button>
+                        </div>
+                        <button onClick={handleSignOut} className="bg-red-600 text-white font-bold py-2 px-4 rounded-xl shadow">Sign Out</button>
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">This is the new real-time kitchen workflow. New orders appear in "Working On".</p>
-                    <p className="text-sm text-red-600 mt-3 font-semibold">
-                        ⚠️ If no orders appear, ensure your Firestore Security Rules allow `read` access to `artifacts/{appId}/public/data/orders`.
-                    </p>
                 </div>
 
-                {/* --- Two-Column Workflow Layout --- */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-7xl mx-auto">
-                    {/* --- Working On Column --- */}
-                    <div className="bg-white p-5 rounded-xl shadow-2xl">
-                        <h2 className="text-2xl font-bold text-amber-700 border-b-4 border-amber-500 pb-2 mb-4 flex items-center">
-                            <Loader2 className="w-5 h-5 mr-2 text-amber-500" /> 
-                            Working On ({workingOnOrders.length})
-                        </h2>
-                        <div className="space-y-4">
-                            {workingOnOrders.length === 0 ? (
-                                <p className="text-gray-500 p-4 bg-amber-50 rounded-lg italic">
-                                    No new orders to prepare.
-                                </p>
+                {dashboardTab === 'orders' ? (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div className="bg-white p-5 rounded-xl shadow-2xl"><h2 className="text-2xl font-bold text-amber-700 mb-4 border-b-4 border-amber-500 pb-2">Working On ({orders.filter(o=>o.status!=='Done').length})</h2><div className="space-y-4">{orders.filter(o=>o.status!=='Done').map(o=><KitchenOrderTicket key={o.id} order={o}/>)}</div></div>
+                        <div className="bg-white p-5 rounded-xl shadow-2xl"><h2 className="text-2xl font-bold text-green-700 mb-4 border-b-4 border-green-500 pb-2">Done ({orders.filter(o=>o.status==='Done').length})</h2><div className="space-y-4">{orders.filter(o=>o.status==='Done').map(o=><KitchenOrderTicket key={o.id} order={o}/>)}</div></div>
+                    </div>
+                ) : dashboardTab === 'history' ? (
+                    <div className="space-y-6">
+                        <div className="bg-white p-6 rounded-xl shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
+                            <div>
+                                <h3 className="text-2xl font-bold flex items-center text-gray-800"><History className="mr-2"/> Order History</h3>
+                                <p className="text-gray-500 text-sm">Archived orders that have been picked up or deleted from the main list.</p>
+                            </div>
+                            <div className="flex flex-wrap gap-2 items-center">
+                                <span className="text-sm font-bold text-gray-600 mr-2 flex items-center"><Trash2 size={16} className="mr-1"/> Clean up History:</span>
+                                <button onClick={() => handleCleanHistory('1w')} disabled={isCleaningHistory} className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded text-xs font-bold transition border border-gray-300">Keep Last Week Only</button>
+                                <button onClick={() => handleCleanHistory('2w')} disabled={isCleaningHistory} className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded text-xs font-bold transition border border-gray-300">Keep Last 2 Weeks</button>
+                                <button onClick={() => handleCleanHistory('3w')} disabled={isCleaningHistory} className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded text-xs font-bold transition border border-gray-300">Keep Last 3 Weeks</button>
+                                <button onClick={() => handleCleanHistory('1m')} disabled={isCleaningHistory} className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-1 rounded text-xs font-bold transition border border-gray-300">Keep Last Month</button>
+                                <button onClick={() => handleCleanHistory('all')} disabled={isCleaningHistory} className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1 rounded text-xs font-bold transition border border-red-200">Delete Entire History</button>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl shadow-xl overflow-hidden">
+                            {historyOrders.length === 0 ? (
+                                <div className="p-12 text-center text-gray-400 font-bold">No history available.</div>
                             ) : (
-                                workingOnOrders.map(order => (
-                                    <KitchenOrderTicket key={order.id} order={order} />
-                                ))
+                                <div className="divide-y divide-gray-100">
+                                    {historyOrders.map(order => (
+                                        <div key={order.id} className="p-4 hover:bg-gray-50 flex flex-col md:flex-row justify-between items-start gap-4">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                    <span className="font-mono text-xs bg-gray-200 px-2 py-1 rounded text-gray-700">#{order.id.substring(0,6)}</span>
+                                                    <span className="text-xs text-gray-600 flex items-center" title="Created At"><Calendar size={12} className="mr-1"/> Created: {order.timestamp?.seconds ? new Date(order.timestamp.seconds*1000).toLocaleString() : 'N/A'}</span>
+                                                    <span className="text-xs text-gray-400 flex items-center" title="Archived At"><Archive size={12} className="mr-1"/> Archived: {order.archivedAt ? new Date(typeof order.archivedAt === 'number' ? order.archivedAt : (order.archivedAt as FirestoreTimestamp).seconds * 1000).toLocaleString() : 'N/A'}</span>
+                                                </div>
+                                                <div className="font-bold text-gray-800 mb-2">{order.customerName} <span className="font-normal text-gray-500 text-sm">({order.items.length} items)</span></div>
+                                                <div className="mt-2 text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                                                    {order.items.map((item, idx) => (
+                                                        <div key={idx} className="flex justify-between"><span>{item.quantity}x {item.name}</span><span className="text-gray-500">${item.subtotal.toFixed(2)}</span></div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div className="text-right flex flex-col justify-between h-full">
+                                                <div className="font-bold text-purple-700 text-lg">${order.totalAmount.toFixed(2)}</div>
+                                              {order.payment?.last4 && (
+                                            <div className="flex items-center justify-end gap-1 text-xs text-gray-500 mt-1 font-mono bg-gray-100 px-2 py-1 rounded self-end">
+                                                <CreditCard size={12} className="text-gray-400" /><span className="capitalize font-semibold">{order.payment.brand}</span><span className="tracking-widest">•••• {order.payment.last4}</span>
+                                                        {order.payment.expMonth && order.payment.expYear && (<span className="ml-2 text-gray-600">{String(order.payment.expMonth).padStart(2, '0')}/{order.payment.expYear}</span>)}
+                                                         </div>
+                                                    )}
+                                                <div className="text-xs text-green-600 font-bold uppercase mt-1">{order.status}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             )}
                         </div>
                     </div>
-
-                    {/* --- DONE Column --- */}
-                    <div className="bg-white p-5 rounded-xl shadow-2xl">
-                        <h2 className="text-2xl font-bold text-green-700 border-b-4 border-green-500 pb-2 mb-4 flex items-center">
-                            <CheckCheck className="w-5 h-5 mr-2 text-green-500" />
-                            DONE (Ready for Pickup) ({doneOrders.length})
-                        </h2>
-                        <div className="space-y-4">
-                            {doneOrders.length === 0 ? (
-                                <p className="text-gray-500 p-4 bg-green-50 rounded-lg italic">
-                                    Completed orders will appear here.
-                                </p>
-                            ) : (
-                                doneOrders.map(order => (
-                                    <KitchenOrderTicket key={order.id} order={order} />
-                                ))
-                            )}
+                ) : (
+                    <div className="space-y-8">
+                        <div className="flex justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-200">
+                             <div><h3 className="text-xl font-bold flex items-center"><Edit className="mr-2"/> Menu Editor</h3><p className="text-xs text-gray-500">Add or remove items below. Changes are local until you click Save.</p></div>
+                             {hasUnsavedChanges ? (
+                                <button onClick={handleSaveChanges} disabled={isSaving} className="bg-green-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:bg-green-700 transition flex items-center animate-pulse">{isSaving ? <Loader2 className="animate-spin mr-2"/> : <Save className="mr-2"/>} Save Changes</button>
+                             ) : (
+                                <button disabled className="bg-gray-300 text-gray-500 font-bold py-3 px-6 rounded-xl flex items-center cursor-not-allowed"><CheckCheck className="mr-2"/> All Saved</button>
+                             )}
+                        </div>
+                        <div className="bg-white p-6 rounded-xl shadow-xl">
+                            <h3 className="text-xl font-bold mb-4 flex items-center"><Plus className="mr-2"/> Add New Item</h3>
+                            <form onSubmit={handleLocalAddItem} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <input placeholder="Dish Name" className="p-3 border rounded" value={newItem.name} onChange={e=>setNewItem({...newItem, name: e.target.value})} required />
+                                <input placeholder="Price (e.g. 15.50)" type="number" step="0.01" className="p-3 border rounded" value={newItem.price} onChange={e=>setNewItem({...newItem, price: e.target.value})} required />
+                                <input placeholder="Image URL (Optional)" className="p-3 border rounded" value={newItem.image} onChange={e=>setNewItem({...newItem, image: e.target.value})} />
+                                <input placeholder="Description" className="p-3 border rounded" value={newItem.description} onChange={e=>setNewItem({...newItem, description: e.target.value})} />
+                                <button type="submit" disabled={isAddingItem} className="md:col-span-2 bg-gray-900 text-white font-bold py-3 rounded hover:bg-black transition flex items-center justify-center">{isAddingItem ? <Loader2 className="animate-spin mr-2"/> : <Plus className="mr-2"/>} Add Item (Draft)</button>
+                            </form>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                            {dashboardMenuItems.map((item, index) => (
+                                <div key={item.id || `new_${index}`} className={`bg-white p-4 rounded-xl shadow flex items-center gap-4 relative group ${!item.id ? 'border-2 border-green-400 bg-green-50' : ''}`}>
+                                    <img src={item.image} className="w-16 h-16 rounded-lg object-cover" onError={e=>e.currentTarget.src="https://placehold.co/64x64?text=Dish"}/>
+                                    <div className="flex-grow">
+                                        <h4 className="font-bold">{item.name} { !item.id && <span className="text-[10px] bg-green-200 text-green-800 px-1 rounded ml-1">NEW</span>}</h4>
+                                        <p className="text-sm text-gray-500">${item.price.toFixed(2)}</p>
+                                    </div>
+                                    <button onClick={() => handleLocalDeleteByIndex(index)} className="bg-red-100 text-red-600 p-2 rounded-lg hover:bg-red-200 transition"><Trash2 size={18}/></button>
+                                </div>
+                            ))}
                         </div>
                     </div>
-                </div>
+                )}
             </div>
         );
     };
 
     const renderContent = () => {
         switch (activeSection) {
-            case 'home':
-                return renderHome();
-            case 'menu':
-                return renderMenu();
-            case 'cart':
-                return renderCart();
-            case 'checkout':
-                return renderCheckout();
-            case 'dashboard':
-                return renderDashboard();
-            default:
-                return renderHome();
+            case 'home': return renderHome();
+            case 'menu': return renderMenu();
+            case 'cart': return renderCart();
+            case 'checkout': return renderCheckout();
+            case 'dashboard': return renderDashboard();
+            default: return renderHome();
         }
     };
-    
-    // Main component return structure
+
     return (
         <div className="min-h-screen bg-gray-100 font-sans flex flex-col">
             <OrderStatusMessage status={orderStatus} />
-
-            {/* Desktop Sidebar Navigation (Hidden on Mobile) */}
-            <div className="hidden md:flex bg-white shadow-xl p-6 border-r border-gray-200 fixed top-0 left-0 h-full flex-col space-y-6 z-10 w-[140px] lg:w-[180px]">
-                <div className="text-center py-4">
-                    <h1 className="text-3xl font-extrabold text-purple-700 font-serif">Saffron</h1>
-                    <h2 className="text-sm text-gray-500">The Table</h2>
-                </div>
-                
+            <div className="hidden md:flex bg-white shadow-xl p-6 border-r fixed top-0 left-0 h-full flex-col space-y-6 z-10 w-[140px] lg:w-[180px]">
+                <div className="text-center py-4"><h1 className="text-3xl font-extrabold text-purple-700 font-serif">Saffron</h1><h2 className="text-sm text-gray-500">The Table</h2></div>
                 <div className="flex flex-col space-y-6 flex-grow">
                     <NavButton sectionName="home" label="Home" IconComponent={Home} />
                     <NavButton sectionName="menu" label="Menu" IconComponent={BookOpen} />
                     <NavButton sectionName="cart" label="Cart" IconComponent={ShoppingCart} count={cartItems.length} />
-                    {cartItems.length > 0 && (
-                        <NavButton sectionName="checkout" label="Checkout" IconComponent={DollarSign} />
-                    )}
+                    {cartItems.length>0 && activeSection !== 'dashboard' && <NavButton sectionName="checkout" label="Checkout" IconComponent={DollarSign} />}
                 </div>
-
-                {/* Owner Dashboard - Styled Differently */}
-                <div className="pt-6 border-t border-gray-200">
-                    <NavButton sectionName="dashboard" label="Dashboard" IconComponent={ChefHat} count={orders.length} isOwner={true} />
-                </div>
+                <div className="pt-6 border-t border-gray-200"><NavButton sectionName="dashboard" label="Dashboard" IconComponent={ChefHat} count={orders.length} isOwner={true} /></div>
             </div>
-
-            {/* Main Content Area */}
             <main className="flex-grow p-4 md:p-8 md:ml-[140px] lg:ml-[180px] mt-16 md:mt-0">
                 {isAppReady ? (
                     <div className="container mx-auto max-w-7xl pt-4 pb-20 md:pb-0">
-                        {renderContent()}
+                        {/* 🚀 ONLY ONE VIEW ACTIVE AT A TIME TO PREVENT CRASHES */}
+                        <div style={{ display: activeSection === 'home' ? 'block' : 'none' }}>{renderHome()}</div>
+                        <div style={{ display: activeSection === 'menu' ? 'block' : 'none' }}>{renderMenu()}</div>
+                        <div style={{ display: activeSection === 'cart' ? 'block' : 'none' }}>{renderCart()}</div>
+                        <div style={{ display: activeSection === 'checkout' ? 'block' : 'none' }}>{renderCheckout()}</div>
+                        <div style={{ display: activeSection === 'dashboard' ? 'block' : 'none' }}>{renderDashboard()}</div>
                     </div>
-                ) : (
-                    <div className="flex items-center justify-center h-full min-h-[50vh] text-purple-600 text-xl font-semibold">
-                        <Loader2 className="animate-spin mr-3" size={32} /> Loading Application...
-                    </div>
-                )}
+                ) : <div className="flex justify-center items-center h-[50vh] text-purple-600 text-xl font-bold"><Loader2 className="animate-spin mr-3"/> Loading...</div>}
             </main>
-
-            {/* Mobile Bottom Navigation (Hidden on Desktop) */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-20">
-                <div className="flex justify-around items-center h-16">
+            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-2xl z-20">
+                <div className="flex justify-around h-16 items-center">
                     <MobileNavButton sectionName="home" label="Home" IconComponent={Home} />
                     <MobileNavButton sectionName="menu" label="Menu" IconComponent={BookOpen} />
                     <MobileNavButton sectionName="cart" label="Cart" IconComponent={ShoppingCart} count={cartItems.length} />
