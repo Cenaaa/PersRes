@@ -34,7 +34,7 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 // ====================================================================================
 
 // ⚠️ REPLACE THIS WITH YOUR REAL PUBLISHABLE KEY
-const STRIPE_PUBLISHABLE_KEY = "pk_test_51SNRYLRtvj10xKSpPaS4rxSGuMhRatLcd9YqAuo9gH17SytoIqUh7hx0TjXIo962YrwVTAP1M29isVZAT6gOTaoF00zl0eoDxp"; 
+const STRIPE_PUBLISHABLE_KEY = "***"; 
 const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
 
 const canvasFirebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
